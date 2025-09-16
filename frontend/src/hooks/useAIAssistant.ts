@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import api, { type ChatResponse } from "@/lib/api";
+import { askAI, type ChatResponse } from "@/lib/api";
 
 /** 카드/키워드 UI에 맞춘 클라이언트 측 타입 */
 export interface AICard {
@@ -91,7 +91,7 @@ export function useAIAssistant(options: UseAIAssistantOptions = {}) {
       setKeywords([]);
 
       try {
-        const resp = await api.askAI({ q }); // 백엔드 호출
+        const resp = await askAI(q); // 백엔드 호출
         if (controller.signal.aborted) return;
 
         setData(resp);

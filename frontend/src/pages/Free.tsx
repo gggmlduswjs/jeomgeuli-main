@@ -1,6 +1,6 @@
 // src/pages/Free.tsx
 import React, { useEffect, useRef, useState } from "react";
-import api from "@/lib/api";
+import { convertBraille } from "@/lib/api";
 import BrailleRow from "../components/BrailleRow";
 import type { Cell as TupleCell } from "@/lib/brailleMap"; // 6튜플 타입
 import { normalizeCells } from "@/lib/brailleSafe";
@@ -35,7 +35,7 @@ export default function Free() {
     // 가벼운 디바운스 (타이핑 중 과호출 방지)
     const t = setTimeout(async () => {
       try {
-        const res = await api.convertBraille(trimmed, "word", { signal: ctrl.signal });
+        const res = await convertBraille(trimmed);
         const raw = (res as any)?.cells ?? res;
         const normalized = normalizeCells(raw) as unknown as TupleCell[];
         setCells(normalized);

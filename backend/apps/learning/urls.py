@@ -1,10 +1,12 @@
 from django.urls import path
-from . import views_review
+from . import views_review as views
 
 urlpatterns = [
-    # Review system endpoints
-    path("enqueue/", views_review.enqueue_review, name="enqueue_review"),
-    path("add/", views_review.add_review, name="add_review"),
-    path("next/", views_review.next_reviews, name="next_reviews"),
-    path("grade/<int:item_id>/", views_review.grade_review, name="grade_review"),
+    path("",         views.review_list,   name="review_list"),   # GET
+    path("save/",    views.review_save,   name="review_save"),   # POST
+    path("enqueue/", views.review_enqueue,name="review_enqueue"),# POST
+    
+    # 레거시 호환
+    path("add/",     views.review_add,    name="review_add"),
+    path("today/",   views.review_today,  name="review_today"),
 ]

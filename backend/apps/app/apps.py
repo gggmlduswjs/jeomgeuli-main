@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class ChatConfig(AppConfig):
+class AppConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.chat'
-    verbose_name = 'AI 채팅'
+    name = 'apps.app'
+    verbose_name = '공용 앱'

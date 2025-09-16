@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AppShellMobile from "../components/AppShellMobile";
-import api from "@/lib/api";
+import { convertBraille } from "@/lib/api";
 import { useTTS } from "../hooks/useTTS";
 import { normalizeCells } from "@/lib/brailleSafe";
 import { maskToGrid6 } from "@/lib/brailleGrid";
@@ -65,7 +65,7 @@ export default function FreeConvert() {
       setError(null);
 
       // 백엔드 점자 변환 API 사용
-      const res = await api.convertBraille(text, "word");
+      const res = await convertBraille(text);
       const raw = (res as any)?.cells ?? res;
       const cells = normalizeCells(raw) as unknown as Cell[];
       const bins = (res as any)?.bins;

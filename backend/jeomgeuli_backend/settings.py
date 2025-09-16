@@ -16,6 +16,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '8000']
 
+# URL 설정
+APPEND_SLASH = True  # /api/chat/ask → /api/chat/ask/ 로 자동 보정
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -26,13 +29,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'apps.api',
-    'apps.braille',
-    'apps.chat',
-    'apps.learn',
-    'apps.learning',
-    'apps.newsfeed',
-    'apps.search',
+    'apps.app',      # 헬스체크 등 공용 기능
+    'apps.api',      # API 게이트웨이
+    'apps.braille',  # 점자 변환
+    'apps.chat',     # AI 채팅
+    'apps.learn',    # 학습 데이터
+    'apps.learning', # 복습 시스템
+    'apps.newsfeed', # 뉴스 피드
+    'apps.search',   # 검색 기능
 ]
 
 MIDDLEWARE = [
@@ -110,6 +114,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:3002',
     'http://localhost:5000',
+    'http://localhost:5173',  # Vite default port
 ]
 
 # REST Framework settings

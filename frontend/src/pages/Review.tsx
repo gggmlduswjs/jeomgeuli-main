@@ -1,22 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import api from "@/lib/api";                     // ✅ default api 임포트
-import type { Cell } from "@/lib/brailleSafe";   // ✅ Cell 타입 출처 통일
-import { normalizeCells } from "@/lib/brailleSafe";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, RotateCcw, Mic, MicOff, Check, X } from "lucide-react";
+import { api } from "@/lib/http";
+import { type Cell } from "@/lib/brailleSafe";
 
+// 점자 셀 표시 컴포넌트 (퀴즈와 동일)
 function Dot({ on }: { on: boolean }) {
-  return (
-    <span
-      className={`inline-block w-5 h-5 rounded-full mx-0.5 my-0.5 border-2 transition-all duration-200 ${
-        on ? "bg-blue-600 border-blue-600 shadow-md" : "bg-gray-100 border-gray-300"
-      }`}
-    />
-  );
+  return <span className={`inline-block w-4 h-4 rounded-full mx-0.5 my-0.5 border-2 ${on ? "bg-primary border-primary shadow-sm" : "bg-card border-border"}`} />;
 }
-
 function CellView({ c }: { c: Cell }) {
   const [a,b,c2,d,e,f] = c || [0,0,0,0,0,0];
   return (
-    <div className="inline-flex flex-col px-3 py-2 rounded-lg border-2 bg-white shadow-sm hover:shadow-md transition-shadow">
+    <div className="inline-flex flex-col px-3 py-2 rounded-xl border border-border bg-white shadow-toss">
       <div className="flex"><Dot on={!!a}/><Dot on={!!d}/></div>
       <div className="flex"><Dot on={!!b}/><Dot on={!!e}/></div>
       <div className="flex"><Dot on={!!c2}/><Dot on={!!f}/></div>
@@ -24,136 +19,280 @@ function CellView({ c }: { c: Cell }) {
   );
 }
 
-type ReviewItem = { kind: "char" | "word" | "sentence"; content: string };
+// 🎯 STT 결과와 정답을 유연하게 매칭하는 함수 (퀴즈와 동일)
+function isAnswerMatch(userInput: string, correctAnswer: string, item: any): boolean {
+  const normalizedUser = userInput.trim().toLowerCase();
+  const normalizedCorrect = correctAnswer.trim().toLowerCase();
+  
+  // 1) 정확한 매칭
+  if (normalizedUser === normalizedCorrect) return true;
+  
+  // 2) 자모 특별 처리: "기역" ↔ "ㄱ" 양방향 매칭
+  const char = item.char?.trim();
+  const name = item.name?.trim();
+  
+  if (char && name) {
+    // "기역"이라고 말했는데 STT가 "ㄱ"으로 인식한 경우
+    if ((normalizedUser === char.toLowerCase() && normalizedCorrect === name.toLowerCase()) ||
+        // "ㄱ"이라고 말했는데 STT가 "기역"으로 인식한 경우  
+        (normalizedUser === name.toLowerCase() && normalizedCorrect === char.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  // 3) 부분 매칭 (예: "기역"에서 "기"만 인식된 경우)
+  if (normalizedCorrect.includes(normalizedUser) || normalizedUser.includes(normalizedCorrect)) {
+    return true;
+  }
+  
+  return false;
+}
 
-export default function Review(){
-  const key = `review_${new Date().toISOString().slice(0,10)}`;
-  const items = useMemo(
-    () => (JSON.parse(localStorage.getItem(key) || "[]") as ReviewItem[]),
-    [key]
-  );
-
-  const [idx,setIdx] = useState(0);
+export default function Review() {
+  const navigate = useNavigate();
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [userAnswer, setUserAnswer] = useState("");
   const [showAnswer, setShowAnswer] = useState(false);
+  const [result, setResult] = useState<null | { ok: boolean; answer: string }>(null);
   const [completed, setCompleted] = useState<number[]>([]);
-  const cur = items[idx];
+  const [score, setScore] = useState({ correct: 0, total: 0 });
 
-  const [cells,setCells] = useState<Cell[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  // STT
+  const [sttOn, setSttOn] = useState(false);
+  const recRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(()=>{
-    (async ()=>{
-      if (!cur) return;
+  // 데이터 로딩
+  useEffect(() => {
+    (async () => {
+      // 1) 서버 목록 시도
       try {
-        // ✅ 항목별 kind 그대로 사용
-        const resp = await api.convertBraille(cur.content, cur.kind);
-        const raw = (resp as any)?.cells ?? resp;
-        const normalized = normalizeCells(raw);
-        setCells(normalized);
-        setError((resp as any)?.ok === false ? ((resp as any)?.error ?? "convert_failed") : null);
-        setShowAnswer(false); // 새 문제로 넘어갈 때 답 숨김
-      } catch (e) {
-        console.error("Review convertBraille error:", e);
-        setCells([]);
-        setError("conversion_failed");
-      }
+        const j = await api('/review/list');
+        if (Array.isArray(j?.items) && j.items.length) {
+          setItems(j.items); setLoading(false); return;
+        }
+      } catch {}
+
+      // 2) 로컬 폴백
+      const local = JSON.parse(localStorage.getItem('review:pending') || '[]');
+      setItems(local.reverse()); // 최신 먼저
+      setLoading(false);
     })();
-  },[cur]);
+  }, []);
 
-  const handleShowAnswer = () => setShowAnswer(true);
+  // STT 초기화
+  useEffect(() => {
+    const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    const r: any = new SR();
+    r.lang = "ko-KR";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onresult = (e: SpeechRecognitionEvent) => {
+      const t = Array.from(e.results).map(r => r[0].transcript).join("").trim();
+      setUserAnswer(t);
+      setTimeout(() => onSubmit(t), 50);
+    };
+    r.onerror = (e: any) => {
+      setSttOn(false);
+    };
+    r.onend = () => setSttOn(false);
+    recRef.current = r;
+    return () => { try { r.abort(); } catch {} };
+  }, []);
 
-  const handleNext = () => {
-    if (!completed.includes(idx)) setCompleted(prev => [...prev, idx]);
-    if (idx + 1 < items.length) setIdx(idx + 1);
-    else alert("오늘의 복습을 모두 완료했습니다! 🎉");
-  };
+  const currentItem = items[currentIdx];
+  const cells: Cell[] = currentItem?.payload?.questionCells || [];
 
-  const handlePrev = () => setIdx(Math.max(0, idx - 1));
-
-  const speak = (text: string) => {
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "ko-KR";
-      window.speechSynthesis.speak(u);
+  const startSTT = () => { 
+    try { 
+      recRef.current?.start(); 
+      setSttOn(true); 
     } catch (e) {
-      console.warn("TTS error:", e);
+      console.log('[Review] STT start error:', e);
+    }
+  };
+  const stopSTT = () => { 
+    try { 
+      recRef.current?.stop();  
+      setSttOn(false);
+    } catch (e) {
+      console.log('[Review] STT stop error:', e);
     }
   };
 
-  if (items.length === 0) {
-    return <main className="p-6">오늘은 복습할 항목이 없습니다.</main>;
-  }
+  // TTS
+  const speak = (t: string) => {
+    try { 
+      const u = new SpeechSynthesisUtterance(t); 
+      u.lang="ko-KR"; 
+      window.speechSynthesis.speak(u); 
+    } catch {}
+  };
+
+  const onSubmit = async (val?: string) => {
+    if (!currentItem) return;
+    const p = currentItem.payload ?? currentItem;
+    const answer = p.expected?.trim() || "";
+    const userAns = (val ?? userAnswer).trim();
+
+    const ok = userAns.length > 0 && isAnswerMatch(userAns, answer, p);
+    
+    setResult({ ok, answer });
+    setScore(prev => ({ 
+      correct: prev.correct + (ok ? 1 : 0), 
+      total: prev.total + 1 
+    }));
+
+    setTimeout(() => {
+      setResult(null);
+      setUserAnswer("");
+      setShowAnswer(false);
+      
+      if (currentIdx + 1 < items.length) {
+        setCurrentIdx(prev => prev + 1);
+        inputRef.current?.focus();
+      } else {
+        // 복습 완료
+        alert(`복습 완료! 정답률: ${Math.round((score.correct + (ok ? 1 : 0)) / (score.total + 1) * 100)}%`);
+        navigate("/", { replace: true });
+      }
+    }, 1500);
+  };
+
+  const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key === "Enter") onSubmit();
+  };
+
+  const showAnswerNow = () => {
+    setShowAnswer(true);
+    const p = currentItem?.payload ?? currentItem;
+    if (p?.expected) speak(p.expected);
+  };
+
+  if (loading) return <div className="p-4">불러오는 중…</div>;
+  if (!items.length) return <div className="p-4">오늘은 복습할 항목이 없습니다.</div>;
+
+  const progress = Math.round(((currentIdx + 1) / items.length) * 100);
+  const p = currentItem?.payload ?? currentItem;
 
   return (
-    <main className="p-6 space-y-4 pb-32">
-      {/* 진행률 */}
-      <div className="flex justify-between items-center">
-        <div className="text-lg font-semibold">
-          복습 노트 ({new Date().toISOString().slice(0,10)})
-        </div>
-        <div className="text-sm text-gray-500">
-          {idx + 1} / {items.length} ({completed.length} 완료)
-        </div>
-      </div>
-
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${((idx + 1) / items.length) * 100}%` }}
-        />
-      </div>
-
-      {/* 카드 */}
-      <div className="card p-6">
-        <div className="mb-2 text-gray-500">{cur.kind}</div>
-
-        {/* 점자 표시 */}
-        <div className="flex gap-3 flex-wrap justify-center mb-4">
-          {cells.length > 0 ? (
-            cells.map((c,i)=>(<CellView key={i} c={c}/>))
-          ) : (
-            <div className="p-6 text-center text-gray-500">
-              <p>점자 변환 중...</p>
-              {error && <p className="text-sm text-red-500 mt-2">변환 실패: {error}</p>}
+    <div className="min-h-screen bg-bg text-fg flex flex-col">
+      {/* 헤더 */}
+      <header className="bg-white border-b border-border shadow-toss">
+        <div className="max-w-md mx-auto px-4">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-3 rounded-2xl hover:bg-card focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="뒤로 가기"
+            >
+              <ArrowLeft className="w-6 h-6 text-fg" />
+            </button>
+            <div className="flex-1 text-center">
+              <h1 className="text-lg font-semibold text-fg">복습 모드</h1>
+              <div className="text-xs text-muted mt-1">
+                {currentIdx + 1} / {items.length} (정답률: {score.total > 0 ? Math.round(score.correct / score.total * 100) : 0}%)
+              </div>
             </div>
-          )}
+            <div className="w-12" />
+          </div>
         </div>
+      </header>
 
-        {/* 답 */}
-        {showAnswer ? (
-          <div className="text-2xl font-bold text-center text-green-600 mb-4" aria-live="polite">
-            {cur.content}
+      {/* 본문 */}
+      <main className="flex-1 p-4">
+        <div className="max-w-md mx-auto space-y-6">
+          {/* 진행률 */}
+          <div className="bg-white rounded-2xl p-4 shadow-toss">
+            <div className="flex justify-between text-sm text-muted mb-2">
+              <span>진척도</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="w-full bg-border rounded-full h-2">
+              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-        ) : (
-          <div className="text-center mb-4">
-            <div className="text-gray-500 mb-2">점자를 확인한 후 답을 맞춰보세요</div>
-            <button onClick={handleShowAnswer} className="btn-primary px-6 py-2">
-              답 보기
-            </button>
-          </div>
-        )}
 
-        {/* 읽어주기 */}
-        {showAnswer && (
-          <div className="text-center">
-            <button onClick={() => speak(cur.content)} className="btn-secondary px-4 py-2">
-              🔊 읽어주기
-            </button>
-          </div>
-        )}
-      </div>
+          {/* 문제 카드 */}
+          <div className="bg-white rounded-2xl p-6 shadow-toss text-center">
+            {/* 결과 배지 */}
+            {result && (
+              <div className="mb-4 w-full flex justify-center">
+                <div className={`px-3 py-2 rounded-xl text-sm ${
+                  result.ok ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                }`}>
+                  {result.ok ? (
+                    <><Check className="inline w-4 h-4 mr-1" />정답입니다!</>
+                  ) : (
+                    <><X className="inline w-4 h-4 mr-1" />오답입니다. 정답: {result.answer}</>
+                  )}
+                </div>
+              </div>
+            )}
 
-      {/* 네비게이션 */}
-      <div className="fixed bottom-3 inset-x-0 px-6">
-        <div className="flex gap-3">
-          <button className="btn flex-1" onClick={handlePrev} disabled={idx === 0}>
-            이전
-          </button>
-          <button className="btn-primary flex-1" onClick={handleNext}>
-            {idx + 1 < items.length ? "다음" : "완료"}
-          </button>
+            {/* 점자 셀 표출 */}
+            <div className="mb-6 flex justify-center">
+              {cells.length ? (
+                <div className="inline-flex flex-wrap justify-center gap-3">
+                  {cells.map((c, idx) => <CellView key={idx} c={c} />)}
+                </div>
+              ) : (
+                <div className="text-muted text-sm py-8">점자 데이터 없음</div>
+              )}
+            </div>
+
+            {/* 답 표시 또는 입력 */}
+            {showAnswer ? (
+              <div className="text-2xl font-bold text-green-600 mb-4">
+                {p?.expected || "정답 없음"}
+              </div>
+            ) : (
+              <>
+                <label className="block text-sm text-muted mb-2">정답 입력</label>
+                <input
+                  ref={inputRef}
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder="정확히 입력하세요"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+              </>
+            )}
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={showAnswerNow}
+                className="flex-1 px-4 py-3 rounded-2xl bg-accent text-white hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <RotateCcw className="inline w-4 h-4 mr-1" /> 답 보기
+              </button>
+
+              {/* 음성 입력 토글 */}
+              <button
+                onClick={sttOn ? stopSTT : startSTT}
+                className={`px-4 py-3 rounded-2xl ${sttOn ? "bg-danger text-white" : "bg-card text-fg"} hover:bg-border focus:outline-none focus:ring-2 focus:ring-primary`}
+                aria-pressed={sttOn}
+                title="음성으로 정답 말하기"
+              >
+                {sttOn ? <><MicOff className="inline w-4 h-4 mr-1" /> 끄기</> : <><Mic className="inline w-4 h-4 mr-1" /> 음성 입력</>}
+              </button>
+
+              <button
+                onClick={() => onSubmit()}
+                disabled={!userAnswer.trim().length}
+                className="flex-1 px-4 py-3 rounded-2xl bg-primary text-white hover:bg-primary/90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                제출
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

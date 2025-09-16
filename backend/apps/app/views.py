@@ -26,6 +26,9 @@ def _split_korean(text:str):
     # 간단 분해: 글자 단위(완성형 그대로). 상세 초성/중성/종성 분해는 프론트가 가진 사전으로 보완.
     return list(text)
 
+def health(request):
+    return JsonResponse({"ok": True})
+
 def api_health(request):
     return JsonResponse({"ok": True})
 

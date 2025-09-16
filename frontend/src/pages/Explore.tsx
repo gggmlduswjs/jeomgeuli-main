@@ -8,7 +8,7 @@ import { useTTS } from '../hooks/useTTS';
 import useBrailleBLE from '../hooks/useBrailleBLE';
 import { useBraillePlayback } from '../hooks/useBraillePlayback';
 import useVoiceCommands from '../hooks/useVoiceCommands';
-import api, { type ChatResponse } from '@/lib/api';
+import { askAI, type ChatResponse } from '@/lib/api';
 import type { ChatMessage } from '@/types/chat';
 
 function extractBulletsFromMarkdown(md?: string): string[] {
@@ -76,7 +76,7 @@ export default function Explore() {
 
     try {
       setIsLoading(true);
-      const resp = await api.askAI({ q: `[detail] ${q}` });
+      const resp = await askAI(`[detail] ${q}`);
 
       // 카드 메시지로 추가
       const detailMsg: ChatMessage = {
@@ -147,7 +147,7 @@ export default function Explore() {
 
     try {
       // AI API 호출
-      const response: ChatResponse = await api.askAI({ q: userText });
+      const response: ChatResponse = await askAI(userText);
 
       // typing indicator 제거
       setMessages(p => p.filter(m => m.id !== typingId));

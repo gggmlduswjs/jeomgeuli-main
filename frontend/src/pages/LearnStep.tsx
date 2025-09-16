@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowLeft, SkipForward, RotateCcw } from "lucide-react";
 import { convertBraille, fetchLearn } from '@/lib/api';
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from '@/api';
+import { asStr, asStrArr } from '@/lib/safe';
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Cell as CellTuple } from "@/lib/brailleSafe";
 import { normalizeCells } from "@/lib/brailleSafe";
 import { localToBrailleCells } from "@/lib/braille";
@@ -57,8 +59,16 @@ type Item = LessonItem & {
 
 export default function LearnStep() {
   const [sp] = useSearchParams();
-  const mode = (sp.get('mode') as LessonMode) || 'char';
+  const { pathname } = useLocation();
   const navigate = useNavigate();
+
+  // 경로(/learn/char|word|sentence) 우선, 없으면 ?mode=, 그래도 없으면 'char'
+  const pathTail = pathname.split('/').pop() || '';
+  const fromPath = (['char','word','sentence'] as LessonMode[]).includes(pathTail as any)
+    ? (pathTail as LessonMode)
+    : undefined;
+
+  const mode = (fromPath || (sp.get('mode') as LessonMode) || 'char');
 
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<Item[]>([]);
@@ -75,7 +85,7 @@ export default function LearnStep() {
     setIdx(-1);
     (async () => {
       try {
-        console.log("[LearnStep] API_BASE is", (await import("@/lib/http")).API_BASE);
+        console.log("[LearnStep] Starting to fetch learn data for mode:", mode);
         const { title, items } = await fetchLearn(mode);
         if (!alive) return;
         

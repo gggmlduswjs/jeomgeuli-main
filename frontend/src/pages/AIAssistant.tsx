@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import api, { type ChatResponse, type ChatMode } from "@/lib/api";
+import { askAI, type ChatResponse, type ChatMode } from "@/lib/api";
 import { useTTS } from "@/hooks/useTTS";
 import { useBraillePlayback } from "@/hooks/useBraillePlayback";
 // (선택) SSE 스트리밍이 있다면 readSSE 사용 가능
@@ -62,7 +62,7 @@ export default function AIAssistant() {
 
     try {
       // 단순 POST 응답 (SSE를 쓰려면 readSSE로 대체 가능)
-      const res = await api.askAI({ q: `[${currentMode}] ${q}` }, { signal: ctrl.signal });
+      const res = await askAI(`[${currentMode}] ${q}`);
       setResponse(res);
 
       // 점자 출력: 토글이 켜져 있고 키워드가 있으면 큐 적재 후 재생

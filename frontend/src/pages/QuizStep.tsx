@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
-import api from "@/lib/api";                           // ✅ api 객체로 임포트
+import { convertBraille } from "@/lib/api";           // ✅ convertBraille 함수로 임포트
 import type { Cell } from "@/lib/brailleSafe";        // ✅ Cell 타입 출처 변경
 import { normalizeCells } from "@/lib/brailleSafe";
 
@@ -70,7 +70,7 @@ export default function Quiz(){
     }
     const id = setTimeout(async ()=>{
       try {
-        const resp = await api.convertBraille(targetText, mode);     // ✅ api.convertBraille 사용
+        const resp = await convertBraille(targetText);               // ✅ convertBraille 함수 사용
         const raw = (resp as any)?.cells ?? resp;
         const normalizedCells = normalizeCells(raw);
         setCells(normalizedCells);

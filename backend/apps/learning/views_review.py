@@ -1,10 +1,36 @@
 import json
+import os
+from pathlib import Path
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from .models import ReviewItem, ReviewAttempt
-from .srs import calculate_next_review, get_due_items
+from django.conf import settings
+from datetime import datetime
+
+# 파일 기반 복습 시스템 (DB 없이)
+DATA_DIR = Path(settings.BASE_DIR) / "data"
+
+def _load_reviews():
+    """복습 데이터 로드"""
+    review_file = DATA_DIR / "review.json"
+    if not review_file.exists():
+        return []
+    try:
+        with open(review_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def _save_reviews(reviews):
+    """복습 데이터 저장"""
+    review_file = DATA_DIR / "review.json"
+    try:
+        with open(review_file, "w", encoding="utf-8") as f:
+            json.dump(reviews, f, ensure_ascii=False, indent=2)
+        return True
+    except:
+        return False
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -148,3 +174,48 @@ def add_review(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+# 파일 기반 복습 시스템 함수들
+@csrf_exempt
+def review_save(request):
+    """POST {"kind": "wrong|keyword", "payload": {...}} -> {"ok": true}"""
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+        kind = body.get("kind", "wrong")
+        payload = body.get("payload", {})
+        
+        reviews = _load_reviews()
+        reviews.append({
+            "kind": kind,
+            "payload": payload,
+            "timestamp": datetime.now().isoformat(),
+            "id": len(reviews) + 1
+        })
+        
+        if _save_reviews(reviews):
+            return JsonResponse({"ok": True})
+        else:
+            return JsonResponse({"error": "Failed to save"}, status=500)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def review_enqueue(request):
+    """POST {"kind": "wrong|keyword", "payload": {...}} -> {"ok": true}"""
+    return review_save(request)
+
+def review_list(request):
+    """GET -> {"items": [...]}"""
+    try:
+        reviews = _load_reviews()
+        return JsonResponse({"items": reviews})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def review_add(request):
+    """레거시: review_save와 동일"""
+    return review_save(request)
+
+def review_today(request):
+    """레거시: review_list와 동일"""
+    return review_list(request)
