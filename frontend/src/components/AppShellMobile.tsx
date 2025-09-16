@@ -28,17 +28,17 @@ export default function AppShellMobile({
   };
 
   // 사용처가 생길 수 있어 남겨두되 안전 가드 추가
-  const speakText = (text: string) => {
-    if (!isTTSEnabled) return;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ko-KR';
-      utterance.rate = 0.9;
-      utterance.volume = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
+  // const _speakText = (text: string) => {
+  //   if (!isTTSEnabled) return;
+  //   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  //     window.speechSynthesis.cancel();
+  //     const utterance = new SpeechSynthesisUtterance(text);
+  //     utterance.lang = 'ko-KR';
+  //     utterance.rate = 0.9;
+  //     utterance.volume = 1.0;
+  //     window.speechSynthesis.speak(utterance);
+  //   }
+  // };
 
   const toggleTTS = () => {
     setIsTTSEnabled((prev) => {

@@ -30,7 +30,7 @@ const normalize = (arr: Keyword[]): Keyword[] => {
 
 export const useKeywordsStore = create<KeywordsState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       keywords: [],
 
       setKeywords: (keywords) => set({ keywords: normalize(keywords) }),

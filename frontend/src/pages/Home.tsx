@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Search, RotateCcw, Type } from 'lucide-react';
 import AppShellMobile from '../components/AppShellMobile';
@@ -7,6 +7,7 @@ import VoiceButton from '../components/VoiceButton';
 import SpeechBar from '../components/SpeechBar';
 import useTTS from '../hooks/useTTS';
 import useSTT from '../hooks/useSTT';
+import useVoiceCommands from '../hooks/useVoiceCommands';
 import ToastA11y from '../components/ToastA11y';
 
 export default function Home() {
@@ -36,32 +37,73 @@ export default function Home() {
     };
   }, [speak]);
 
+  // 음성 명령어 시스템
+  const { onSpeech } = useVoiceCommands({
+    // 네비게이션
+    home: () => {
+      showToastMessage('이미 홈 화면입니다.');
+      speak('이미 홈 화면입니다.');
+    },
+    back: () => {
+      showToastMessage('홈 화면에서는 뒤로 갈 수 없습니다.');
+      speak('홈 화면에서는 뒤로 갈 수 없습니다.');
+    },
+    
+    // 페이지 이동
+    learn: () => {
+      navigate('/learn');
+      showToastMessage('점자 학습 모드로 이동합니다.');
+      speak('점자 학습 모드로 이동합니다.');
+      stopSTT();
+    },
+    explore: () => {
+      navigate('/explore');
+      showToastMessage('정보 탐색 모드로 이동합니다.');
+      speak('정보 탐색 모드로 이동합니다.');
+      stopSTT();
+    },
+    review: () => {
+      navigate('/review');
+      showToastMessage('복습 모드로 이동합니다.');
+      speak('복습 모드로 이동합니다.');
+      stopSTT();
+    },
+    freeConvert: () => {
+      navigate('/free-convert');
+      showToastMessage('자유 변환 모드로 이동합니다.');
+      speak('자유 변환 모드로 이동합니다.');
+      stopSTT();
+    },
+    quiz: () => {
+      navigate('/quiz');
+      showToastMessage('퀴즈 모드로 이동합니다.');
+      speak('퀴즈 모드로 이동합니다.');
+      stopSTT();
+    },
+    
+    // 도움말
+    help: () => {
+      const helpText = '사용 가능한 음성 명령어: 학습, 정보탐색, 복습, 자유변환, 퀴즈, 도움말, 앱소개듣기';
+      speak(helpText);
+      showToastMessage('도움말을 음성으로 안내합니다.');
+    },
+    
+    // TTS 제어
+    speak: (text: string) => speak(text),
+    mute: () => {
+      showToastMessage('음성이 비활성화되었습니다.');
+    },
+    unmute: () => {
+      showToastMessage('음성이 활성화되었습니다.');
+      speak('음성이 활성화되었습니다.');
+    },
+  });
+
   // 음성 명령 처리
   useEffect(() => {
     if (!transcript) return;
-
-    const command = transcript.toLowerCase().trim();
-
-    if (command.includes('학습') || command.includes('점자학습')) {
-      navigate('/learn');
-      showToastMessage('점자 학습 모드로 이동합니다.');
-      stopSTT();
-    } else if (command.includes('탐색') || command.includes('정보탐색')) {
-      navigate('/explore');
-      showToastMessage('정보 탐색 모드로 이동합니다.');
-      stopSTT();
-    } else if (command.includes('복습')) {
-      navigate('/review');
-      showToastMessage('복습 모드로 이동합니다.');
-      stopSTT();
-    } else if (command.includes('자유') || command.includes('변환')) {
-      navigate('/free-convert');
-      showToastMessage('자유 변환 모드로 이동합니다.');
-      stopSTT();
-    } else {
-      showToastMessage('음성 명령을 인식하지 못했습니다. 다시 시도해주세요.');
-    }
-  }, [transcript, navigate, stopSTT]);
+    onSpeech(transcript);
+  }, [transcript, onSpeech]);
 
   const showToastMessage = (message: string) => {
     setToastMessage(message);
@@ -135,7 +177,7 @@ export default function Home() {
 
         <div className="text-center mt-2">
           <p className="text-sm text-secondary">
-            음성으로 &quot;학습&quot;, &quot;탐색&quot;, &quot;복습&quot;, &quot;자유변환&quot; 중 하나를 말해보세요
+            음성으로 &quot;학습&quot;, &quot;정보탐색&quot;, &quot;복습&quot;, &quot;자유변환&quot;, &quot;퀴즈&quot;, &quot;도움말&quot; 중 하나를 말해보세요
           </p>
         </div>
       </div>

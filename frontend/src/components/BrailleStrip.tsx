@@ -32,7 +32,7 @@ export default function BrailleStrip({ text, size = "normal" }: BrailleStripProp
         const raw = (result && "cells" in result ? result.cells : result) as unknown;
 
         // 다양한 형태를 모두 6칸 불리언 배열로 정규화
-        const normalized: DotArray[] = normalizeCells(raw) as DotArray[];
+        const normalized: DotArray[] = normalizeCells(raw) as unknown as DotArray[];
 
         if (!cancelled) {
           setCells(Array.isArray(normalized) ? normalized : []);

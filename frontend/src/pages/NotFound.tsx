@@ -1,5 +1,5 @@
 // src/pages/NotFound.tsx
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AppShellMobile from "../components/AppShellMobile";
 import { Home, ArrowLeft, Search } from "lucide-react";

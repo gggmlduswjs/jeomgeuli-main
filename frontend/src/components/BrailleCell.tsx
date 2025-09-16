@@ -1,18 +1,19 @@
 import { useMemo } from "react";
 import { localToBrailleCells } from "@/lib/braille";
+import type { DotArray } from "@/types";
 
 type CellBool = [boolean, boolean, boolean, boolean, boolean, boolean];
 
 interface BrailleCellProps {
   keyword?: string;
-  pattern?: boolean[];     // 외부에서 넘어오는 임의 배열도 허용 → 내부 정규화
+  pattern?: DotArray;     // 외부에서 넘어오는 임의 배열도 허용 → 내부 정규화
   active?: boolean;
   className?: string;
 }
 
 const OFF6: CellBool = [false, false, false, false, false, false];
 
-const normalizeTo6 = (arr?: boolean[] | CellBool): CellBool => {
+const normalizeTo6 = (arr?: DotArray | CellBool): CellBool => {
   const out: boolean[] = Array.isArray(arr) ? arr.slice(0, 6) : [];
   while (out.length < 6) out.push(false);
   return out as CellBool;
@@ -35,7 +36,7 @@ export function BrailleCell({
       // localToBrailleCells는 문자열 → 셀 배열 반환한다고 가정
       const cells = localToBrailleCells(keyword);
       // 한 글자 기준 첫 셀 사용. 없으면 OFF6
-      const first = Array.isArray(cells) ? (cells[0] as boolean[] | undefined) : undefined;
+      const first = Array.isArray(cells) ? (cells[0] as unknown as DotArray | undefined) : undefined;
       return normalizeTo6(first);
     } catch {
       return OFF6;

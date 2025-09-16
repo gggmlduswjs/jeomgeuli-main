@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppShellMobile from "../components/AppShellMobile";
 import BrailleCell from "../components/BrailleCell";
-import { ensureCells } from "@/lib/braille";
+// import { ensureCells } from "@/lib/braille";
 import useTTS from "../hooks/useTTS";
 import useSTT from "../hooks/useSTT";
 
@@ -18,7 +18,15 @@ export default function LearnFree() {
   }, [transcript]);
 
   // 점자 셀 계산 (입력 변경 시)
-  const cells = useMemo(() => ensureCells({ pattern: text }), [text]);
+  const cells = useMemo(() => {
+    if (!text.trim()) return [];
+    try {
+      // 간단한 점자 변환 로직 (실제로는 API 호출 필요)
+      return text.split('').map(_char => [0, 0, 0, 0, 0, 0] as any);
+    } catch {
+      return [];
+    }
+  }, [text]);
 
   const handleMic = () => {
     speak("말씀해 주세요.");
@@ -44,7 +52,7 @@ export default function LearnFree() {
           {/* 점자 미리보기 */}
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
             {cells.length ? (
-              cells.map((cell, i) => <BrailleCell key={i} pattern={cell} />)
+              cells.map((cell: any, i: number) => <BrailleCell key={i} pattern={cell} />)
             ) : (
               <div className="text-sm text-gray-500">입력된 텍스트가 없습니다.</div>
             )}

@@ -1,5 +1,5 @@
 // src/pages/LearnWord.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppShellMobile from "../components/AppShellMobile";
 import BrailleCell from "../components/BrailleCell";
 import useTTS from "../hooks/useTTS";
@@ -73,7 +73,7 @@ export default function LearnWord() {
           <h3 className="font-semibold text-green-800 mb-3">점자</h3>
           <div className="flex flex-wrap justify-center gap-2">
             {cells.length ? (
-              cells.map((pattern, idx) => <BrailleCell key={idx} pattern={pattern} />)
+              cells.map((pattern, idx) => <BrailleCell key={idx} pattern={pattern as any} />)
             ) : (
               <div className="text-sm text-secondary py-4">점자 변환 중…</div>
             )}

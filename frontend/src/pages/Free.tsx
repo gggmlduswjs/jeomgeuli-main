@@ -1,5 +1,5 @@
 // src/pages/Free.tsx
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { convertBraille } from "@/lib/api";
 import BrailleRow from "../components/BrailleRow";
 import type { Cell as TupleCell } from "@/lib/brailleMap"; // 6튜플 타입

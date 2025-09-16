@@ -1,7 +1,8 @@
 import React, { useMemo, useCallback } from "react";
 import { FileText, Volume2, Clipboard, Share2 } from "lucide-react";
-import { localToBrailleCells } from "@/lib/braille";
-import type { ChatResponse } from "@/lib/api";
+import { localToBrailleCells } from "../lib/braille";
+import type { ChatResponse } from "../lib/api";
+import { normalizeAnswer } from "../lib/api";
 
 /** 확장형 SummaryCard Props */
 interface SummaryCardProps {
@@ -76,22 +77,28 @@ export default function SummaryCard({
   }
 
   const {
-    chat_markdown = "",
     keywords = [],
     mode = "qa",
     actions = {},
     meta = {},
   } = (data as any) ?? {};
 
-  const bullets = useMemo(() => extractBullets(chat_markdown), [chat_markdown]);
+  const answerText = normalizeAnswer(data);
+  const bullets = useMemo(() => extractBullets(answerText), [answerText]);
+
+  // 디버깅 로그 (개발 중에만)
+  if (import.meta?.env?.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug("[SummaryCard] data=", data, "normalized answer=", answerText);
+  }
 
   const titleText = mode === "news" ? "뉴스 요약" : mode === "explain" ? "설명" : "답변";
   const plainTextForActions = useMemo(() => {
     const header = `[${titleText}]`;
-    const bulletText = bullets.length ? bullets.map((b, i) => `${i + 1}. ${b}`).join("\n") : chat_markdown;
+    const bulletText = bullets.length ? bullets.map((b, i) => `${i + 1}. ${b}`).join("\n") : answerText;
     const kw = Array.isArray(keywords) && keywords.length ? `\n\n# 키워드: ${keywords.join(", ")}` : "";
     return `${header}\n${bulletText}${kw}`.trim();
-  }, [titleText, bullets, chat_markdown, keywords]);
+  }, [titleText, bullets, answerText, keywords]);
 
   // 키워드 점자 출력
   const handleKeywordClick = useCallback(
@@ -100,7 +107,9 @@ export default function SummaryCard({
       if (!k) return;
       try {
         const cells = localToBrailleCells(k);
-        onKeywordBraille?.(k, cells);
+        // Convert Cell[] to boolean[][]
+        const booleanCells = cells.map(cell => cell.map(dot => dot === 1));
+        onKeywordBraille?.(k, booleanCells);
       } catch (e) {
         console.warn("키워드 점자 변환 실패:", e);
       }
@@ -205,9 +214,9 @@ export default function SummaryCard({
           </ul>
         </div>
       ) : (
-        chat_markdown && (
-          <div className="mb-6 text-fg leading-relaxed whitespace-pre-wrap">{chat_markdown}</div>
-        )
+        <div className="mb-6 text-fg leading-relaxed whitespace-pre-wrap">
+          {answerText || "응답이 비어 있습니다. (네트워크/파서/렌더 경로를 확인해 주세요)"}
+        </div>
       )}
 
       {/* 키워드 칩 */}

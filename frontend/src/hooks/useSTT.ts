@@ -175,11 +175,11 @@ declare global {
     readonly length: number;
     item(index: number): SpeechRecognitionAlternative;
     [index: number]: SpeechRecognitionAlternative;
-    isFinal: boolean;
+    readonly isFinal: boolean;
   }
   interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
+    readonly transcript: string;
+    readonly confidence: number;
   }
   interface SpeechRecognitionErrorEvent extends Event {
     error: string;

@@ -1,4 +1,4 @@
-import React from "react";
+// import React from "react";
 import BrailleDots from "./BrailleDots";
 import type { Cell } from "@/lib/brailleMap";
 
@@ -20,7 +20,7 @@ export default function BrailleRow({
       aria-label={label}
     >
       {cells.map((c, idx) => (
-        <BrailleDots key={`cell-${idx}-${JSON.stringify(c)}`} cell={c} />
+        <BrailleDots key={`cell-${idx}-${JSON.stringify(c)}`} pattern={JSON.stringify(c)} />
       ))}
     </div>
   );

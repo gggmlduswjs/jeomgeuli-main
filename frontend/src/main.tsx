@@ -32,8 +32,9 @@ ReactDOM.createRoot(container).render(
   </React.StrictMode>
 );
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(()=>{});
-  });
-}
+// Service worker disabled for development
+// if ("serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker.register("/sw.js").catch(()=>{});
+//   });
+// }

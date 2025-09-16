@@ -1,22 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
-interface TTSOptions {
-  rate?: number;   // 0.1 ~ 10 (브라우저별 유효 범위는 보통 0.5~2)
-  pitch?: number;  // 0 ~ 2
-  volume?: number; // 0 ~ 1
-  lang?: string;   // 예: "ko-KR"
-  voiceName?: string; // 특정 보이스 이름 지정 (선택)
-}
-
-interface TTSHookReturn {
-  speak: (text: string | string[], options?: TTSOptions) => void;
-  stop: () => void;
-  pause: () => void;
-  resume: () => void;
-  isSpeaking: boolean;
-  isPaused: boolean;
-  isSupported: boolean;
-}
+import type { TTSOptions, TTSHookReturn } from "@/types";
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -49,6 +32,8 @@ function useTTS(): TTSHookReturn {
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
   const utteranceQueue = useRef<string[]>([]);
@@ -169,26 +154,42 @@ function useTTS(): TTSHookReturn {
     }
   }, [isSupported]);
 
-  const speak = useCallback((text: string | string[], options: TTSOptions = {}) => {
+  const speak = useCallback(async (text: string | string[], options: TTSOptions = {}) => {
     if (!isSupported) {
       console.warn("Speech synthesis is not supported in this browser");
+      setError("Speech synthesis is not supported");
       return;
     }
-    const texts = (Array.isArray(text) ? text : [text])
-      .map(t => String(t ?? "").trim())
-      .filter(Boolean);
-    if (!texts.length) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const texts = (Array.isArray(text) ? text : [text])
+        .map(t => String(t ?? "").trim())
+        .filter(Boolean);
+      if (!texts.length) {
+        setIsLoading(false);
+        return;
+      }
 
-    // 새 요청이 들어오면 기존 재생은 정리 후 새 큐로 교체
-    hardReset();
-    utteranceQueue.current = texts;
+      // 새 요청이 들어오면 기존 재생은 정리 후 새 큐로 교체
+      hardReset();
+      utteranceQueue.current = texts;
 
-    // 보이스 미로드일 수 있어 한 번 더 시도
-    if (!voicesRef.current || voicesRef.current.length === 0) {
-      try { voicesRef.current = window.speechSynthesis.getVoices(); } catch {}
+      // 보이스 미로드일 수 있어 한 번 더 시도
+      if (!voicesRef.current || voicesRef.current.length === 0) {
+        try { voicesRef.current = window.speechSynthesis.getVoices(); } catch {}
+      }
+
+      processQueue(options);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+      // 오류 발생 시에도 사용자에게 피드백 제공
+      console.error("TTS Error:", err);
+    } finally {
+      setIsLoading(false);
     }
-
-    processQueue(options);
   }, [isSupported, processQueue, hardReset]);
 
   const stop = useCallback(() => {
@@ -234,6 +235,8 @@ function useTTS(): TTSHookReturn {
     isSpeaking,
     isPaused,
     isSupported,
+    isLoading,
+    error,
   };
 }
 

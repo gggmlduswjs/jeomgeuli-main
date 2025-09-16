@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCcw, Mic, MicOff, Check, X } from "lucide-react";
-import { api } from "@/lib/http";
+// import { api } from "@/lib/http";
 import { type Cell } from "@/lib/brailleSafe";
+import { API_BASE } from "@/lib/api";
 
 // 점자 셀 표시 컴포넌트 (퀴즈와 동일)
 function Dot({ on }: { on: boolean }) {
@@ -56,7 +57,7 @@ export default function Review() {
   const [userAnswer, setUserAnswer] = useState("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; answer: string }>(null);
-  const [completed, setCompleted] = useState<number[]>([]);
+  const [_completed, _setCompleted] = useState<number[]>([]);
   const [score, setScore] = useState({ correct: 0, total: 0 });
 
   // STT
@@ -69,7 +70,7 @@ export default function Review() {
     (async () => {
       // 1) 서버 목록 시도
       try {
-        const j = await api('/review/list');
+        const j = await fetch(`${API_BASE}/review/list`).then(r => r.json());
         if (Array.isArray(j?.items) && j.items.length) {
           setItems(j.items); setLoading(false); return;
         }
@@ -95,7 +96,7 @@ export default function Review() {
       setUserAnswer(t);
       setTimeout(() => onSubmit(t), 50);
     };
-    r.onerror = (e: any) => {
+    r.onerror = (_e: any) => {
       setSttOn(false);
     };
     r.onend = () => setSttOn(false);

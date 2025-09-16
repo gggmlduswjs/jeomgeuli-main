@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { askAI, type ChatResponse } from "@/lib/api";
+import { askAI, type ChatResponse, normalizeAnswer } from "@/lib/api";
 
 /** 카드/키워드 UI에 맞춘 클라이언트 측 타입 */
 export interface AICard {
@@ -97,11 +97,12 @@ export function useAIAssistant(options: UseAIAssistantOptions = {}) {
         setData(resp);
 
         // 클라이언트 카드/키워드 구성
-        const bullets = extractBullets(resp.chat_markdown || "");
+        const answerText = normalizeAnswer(resp);
+        const bullets = extractBullets(answerText || "");
         const derivedCards: AICard[] =
           bullets.length > 0
             ? bullets.map((b) => ({
-                title: titleByMode(resp.mode)(resp.mode),
+                title: titleByMode(resp.mode),
                 desc: b,
               }))
             : [];

@@ -157,7 +157,7 @@ export default function Quiz() {
       if (!cur) { setCells([]); return; }
 
       console.log('[Quiz] Current item:', cur);
-      console.log('[Quiz] Item cell:', cur.cell);
+      console.log('[Quiz] Item cell:', (cur as any).cell);
       console.log('[Quiz] Item cells:', cur.cells);
       console.log('[Quiz] Item brailles:', cur.brailles);
 

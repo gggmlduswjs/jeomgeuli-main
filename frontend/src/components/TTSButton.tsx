@@ -1,4 +1,4 @@
-import React from 'react'
+// import React from 'react'
 import { Volume2, VolumeX, Loader2 } from 'lucide-react'
 import { useTTS } from '../hooks/useTTS'
 
@@ -9,7 +9,7 @@ interface TTSButtonProps {
 }
 
 const TTSButton = ({ text, className = '', size = 'md' }: TTSButtonProps) => {
-  const { isSpeaking, isLoading, speak, stop, isSupported, error } = useTTS()
+  const { isSpeaking, isLoading, speak, stop, isSupported, error: _error } = useTTS()
 
   const handleClick = () => {
     if (isSpeaking) {

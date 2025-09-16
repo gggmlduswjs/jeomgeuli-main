@@ -13,9 +13,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 프론트 5173/5174 → 백엔드(예: Django 8000)
-      '/api': {
-        target: 'http://localhost:8000',
+      "/api": {
+        target: process.env.API_BASE_URL || "http://localhost:8000",
         changeOrigin: true,
       },
     },

@@ -4,8 +4,9 @@ import MicButton from "../components/MicButton";
 import BrailleToggle from "../components/BrailleToggle";
 import KeywordChips from "../components/KeywordChips";
 import useVoiceCommands from "../hooks/useVoiceCommands";
-import { connectBraille, sendKeywords } from "@/lib/bleBraille";
-import { readSSE } from "@/lib/sse";
+// import { connectBraille, sendKeywords } from "../lib/bleBraille"; // TODO: Implement BLE braille support
+import { readSSE } from "../lib/sse";
+import { sseURL } from "../lib/http";
 
 type Msg = { id: string; role: "user" | "bot"; text: string };
 
@@ -82,7 +83,7 @@ export default function ExploreStreaming() {
 
       try {
         await readSSE(
-          `${import.meta.env.VITE_API_BASE_URL}/chat/ask/stream`,
+          sseURL("/chat/ask/stream"),
           { q: content },
           (payload /* , meta */) => handleChunk(botId, payload),
           {
@@ -92,6 +93,7 @@ export default function ExploreStreaming() {
             },
             onError: (err) => {
               console.error("[SSE] onError:", err);
+              setMsgs((m) => m.map(x => x.id===botId ? {...x, text: x.text || "연결 오류가 발생했습니다."} : x));
             },
             onClose: () => {
               setIsStreaming(false);
@@ -148,9 +150,11 @@ export default function ExploreStreaming() {
     setBrailleOn(v);
     if (v) {
       try {
-        const ok = await connectBraille();
-        if (!ok) throw new Error("BLE 연결 실패");
-        if (keywords.length) await sendKeywords(keywords);
+        // TODO: Implement BLE braille support
+        // const ok = await connectBraille();
+        // if (!ok) throw new Error("BLE 연결 실패");
+        // if (keywords.length) await sendKeywords(keywords);
+        console.log("BLE braille support not implemented yet");
       } catch (e) {
         alert("BLE 연결 실패");
         setBrailleOn(false);

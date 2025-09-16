@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import { convertBraille } from "@/lib/api";           // ✅ convertBraille 함수로 임포트
 import type { Cell } from "@/lib/brailleSafe";        // ✅ Cell 타입 출처 변경

@@ -56,7 +56,17 @@ export default function TestStep() {
         <div className="card">점자를 촉각으로 확인한 뒤 정답을 말씀해주세요.</div>
 
         <div className="card text-center">
-          <BraillePanel cells={cells} size={22} />
+          <BraillePanel braille={{
+            status: "ready",
+            currentWord: "",
+            currentCells: cells,
+            demoMode: true,
+            queue: [],
+            next: () => {},
+            repeat: () => {},
+            pause: () => {},
+            enqueueKeywords: () => {}
+          }} />
           <div className="mt-3 text-gray-500">곧 질문합니다</div>
         </div>
 

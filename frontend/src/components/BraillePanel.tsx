@@ -1,11 +1,11 @@
-import React from 'react';
 import BrailleCell from './BrailleCell';
+import type { DotArray } from '@/types';
 
 interface BraillePanelProps {
   braille: {
     status: string;
     currentWord: string;
-    currentCells: boolean[][];
+    currentCells: DotArray[];
     demoMode: boolean;
     queue: string[];
     next: () => void;
@@ -25,7 +25,6 @@ export function BraillePanel({ braille }: BraillePanelProps) {
     next,
     repeat,
     pause,
-    enqueueKeywords,
   } = braille;
 
   const isActive = status.includes('출력 중');
@@ -103,7 +102,7 @@ export function BraillePanel({ braille }: BraillePanelProps) {
           aria-label="점자 셀 미리보기"
         >
           {currentCells?.length ? (
-            currentCells.map((pattern, i) => (
+            currentCells.map((pattern: DotArray, i: number) => (
               <BrailleCell
                 key={i}
                 pattern={pattern}
@@ -113,7 +112,7 @@ export function BraillePanel({ braille }: BraillePanelProps) {
             ))
           ) : (
             <BrailleCell
-              pattern={[false, false, false, false, false, false]}
+              pattern={[false, false, false, false, false, false] as DotArray}
               active={false}
               className="scale-110"
             />
@@ -130,8 +129,8 @@ export function BraillePanel({ braille }: BraillePanelProps) {
         음성 명령: ‘자세히’, ‘다음’, ‘점자 출력’ — 이 키워드로 학습을 이어가 보세요.
       </div>
 
-      {/* 개발자 테스트 버튼 */}
-      <div className="dev text-center">
+      {/* 개발자 테스트 버튼 - 실제 키워드가 있을 때만 표시 */}
+      {/* <div className="dev text-center">
         <button
           type="button"
           onClick={() => enqueueKeywords(['경제', '기술', '스포츠'])}
@@ -140,7 +139,7 @@ export function BraillePanel({ braille }: BraillePanelProps) {
         >
           임시 출력(경제·기술·스포츠)
         </button>
-      </div>
+      </div> */}
     </section>
   );
 }

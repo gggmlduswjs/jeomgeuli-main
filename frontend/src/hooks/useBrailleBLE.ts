@@ -10,11 +10,11 @@ export function useBrailleBLE() {
 
   const connect = useCallback(async () => {
     try {
-      if (!navigator.bluetooth) {
+      if (!(navigator as any).bluetooth) {
         throw new Error("Bluetooth API를 지원하지 않는 브라우저입니다.");
       }
 
-      const device = await navigator.bluetooth.requestDevice({
+      const device = await (navigator as any).bluetooth.requestDevice({
         filters: [
           { namePrefix: "Braille" },
           { namePrefix: "점자" },

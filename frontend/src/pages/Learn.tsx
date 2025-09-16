@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Type, FileText, Wand2 } from 'lucide-react';
 import AppShellMobile from '../components/AppShellMobile';

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { askAI } from "@/lib/api";
+import { askAI, normalizeAnswer } from "@/lib/api";
 import type { SummarizeResult } from "../types/explore";
 
 /** 마크다운에서 불릿 포인트 추출 (•, -, *, 1. / 1)) */
@@ -98,7 +98,8 @@ export function useSummarize() {
             : `다음 질문/주제에 대한 간결한 요약을 한국어로 제공해줘(불릿과 키워드 포함):\n${clean}` }
         );
 
-        const md = String(resp?.chat_markdown || "");
+        const answerText = normalizeAnswer(resp);
+        const md = String(answerText || "");
         const bullets = extractBullets(md, 5);
         const keywords = Array.isArray(resp?.keywords) ? resp!.keywords! : [];
         const longText =

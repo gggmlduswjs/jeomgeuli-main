@@ -20,7 +20,7 @@ export default function ChatLikeInput({
   const [isComposing, setIsComposing] = useState(false); // IME(한글) 조합 여부
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { speak, stop, isSpeaking } = useTTS();
+  const { speak: _speak, stop, isSpeaking } = useTTS();
   const { start, stop: stopSTT, isListening, transcript } = useSTT();
 
   // STT 결과가 있을 때 입력창에 자동 입력

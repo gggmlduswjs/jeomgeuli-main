@@ -28,9 +28,9 @@ export default function LearnChar() {
       <ul>
         {items.map((it, i) => (
           <li key={i}>
-            <strong>{it.char ?? it.word ?? it.sentence ?? it.text ?? '(미정)'}</strong>
-            {it.desc && <> — {it.desc}</>}
-            {it.hint && <small> ({it.hint})</small>}
+            <strong>{it.char ?? it.word ?? it.sentence ?? (it as any).text ?? '(미정)'}</strong>
+            {(it as any).desc && <> — {(it as any).desc}</>}
+            {(it as any).hint && <small> ({(it as any).hint})</small>}
           </li>
         ))}
       </ul>

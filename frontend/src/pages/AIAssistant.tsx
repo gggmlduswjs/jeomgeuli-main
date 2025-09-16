@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { askAI, type ChatResponse } from "@/lib/api";
+import { askChat, type ChatResponse, normalizeAnswer } from "@/lib/api";
+import type { ChatMessage } from "@/types";
 import { useTTS } from "@/hooks/useTTS";
 import { useBraillePlayback } from "@/hooks/useBraillePlayback";
+import type { ChatMode } from "@/types";
 // (선택) SSE 스트리밍이 있다면 readSSE 사용 가능
 // import { readSSE } from "@/lib/sse";
 // import SummaryCard from "@/components/SummaryCard"; // 요약 카드 컴포넌트 쓰려면 주석 해제
@@ -11,6 +13,7 @@ export default function AIAssistant() {
   const [brailleOn, setBrailleOn] = useState(false);
   const [currentMode, setCurrentMode] = useState<ChatMode>("qa");
   const [query, setQuery] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [response, setResponse] = useState<ChatResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -34,9 +37,10 @@ export default function AIAssistant() {
       // 과거/다른 스펙 호환: actions.simple_tts 또는 top-level simple_tts
       return (res.actions?.simple_tts || (res as any).simple_tts) as string;
     }
-    if (res.chat_markdown) {
+    const answerText = normalizeAnswer(res);
+    if (answerText) {
       // '• ' 불릿을 읽을 수 있게 줄바꿈 제거
-      const bullets = res.chat_markdown
+      const bullets = answerText
         .split("\n")
         .filter((l) => l.trim().startsWith("•"))
         .map((l) => l.replace(/^•\s*/, "").trim());
@@ -60,28 +64,61 @@ export default function AIAssistant() {
     setResponse(null);
     stop(); // TTS 중지
 
+    // Add user message to history
+    const userMessage: ChatMessage = { id: Date.now().toString(), role: "user", type: "text", text: q, createdAt: Date.now() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setQuery(""); // Clear input
+
     try {
-      // 단순 POST 응답 (SSE를 쓰려면 readSSE로 대체 가능)
-      const res = await askAI({ q: `[${currentMode}] ${q}`, mode: currentMode });
-      setResponse(res);
+      // Use new simplified askChat
+      const text = await askChat(q);
+      setResponse({ answer: text, ok: true });
+
+      // Add assistant response to history
+      const assistantMessage: ChatMessage = { 
+        id: Date.now().toString(),
+        role: "assistant", 
+        type: "text",
+        text: text,
+        createdAt: Date.now()
+      };
+      setMessages([...newMessages, assistantMessage]);
 
       // 점자 출력: 토글이 켜져 있고 키워드가 있으면 큐 적재 후 재생
-      if (brailleOn && res?.keywords?.length) {
-        braille.enqueueKeywords(res.keywords);
+      if (brailleOn && response?.keywords?.length) {
+        braille.enqueueKeywords(response.keywords);
         braille.start();
       }
 
       // 간단 음성 안내
-      const speakText = buildSpeakText(res);
+      const speakText = buildSpeakText(response);
       if (speakText) speak(speakText);
     } catch (err: any) {
       if (err?.name === "AbortError") return; // 사용자가 새로 요청
       console.error("[AIAssistant] ask error:", err);
-      setErrorText(err?.message || "요청에 실패했습니다.");
+      
+      const raw = err?.message || "";
+      const friendly = raw.replace(/^HTTP \d+:\s*[^-]+-\s*/i, ""); // http.ts prefix 제거
+      setErrorText(friendly || "요청에 실패했습니다.");
+      
+      // Set error response
+      const errorResp = { answer: `오류: ${friendly || "서버 오류"}` };
+      setResponse(errorResp);
+      
+      // Add error message to history
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: "assistant",
+        type: "text",
+        text: `오류: ${friendly || "서버 오류"}`,
+        createdAt: Date.now()
+      };
+      setMessages([...newMessages, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [query, currentMode, isLoading, brailleOn, braille, speak, stop, buildSpeakText]);
+  }, [query, currentMode, isLoading, brailleOn, braille, speak, stop, buildSpeakText, messages]);
 
   // 다시 읽기(TTS)
   const repeat = useCallback(() => {
@@ -205,6 +242,31 @@ export default function AIAssistant() {
             )}
           </div>
 
+          {/* 채팅 히스토리 표시 */}
+          {messages.length > 0 && (
+            <div className="card">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">대화 내역</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
+                        message.role === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-100 text-gray-900"
+                      }`}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 응답 표시 */}
           {response && (
             <div className="card">
@@ -219,6 +281,7 @@ export default function AIAssistant() {
                   <p className="text-blue-900">
                     {response.actions?.simple_tts ||
                       (response as any).simple_tts ||
+                      normalizeAnswer(response) ||
                       "응답을 확인했습니다."}
                   </p>
                 </div>

@@ -1,8 +1,11 @@
 Django==4.2.*
 djangorestframework
 django-cors-headers==4.4.0
-google-generativeai>=0.6.0
-python-dotenv
+whitenoise
+openai>=1.40.0
+python-dotenv>=1.0.1
+requests>=2.31.0
 httpx
 markdown
 feedparser==6.0.11
+qrcode>=7.4.2

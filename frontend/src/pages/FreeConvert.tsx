@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import AppShellMobile from "../components/AppShellMobile";
 import { convertBraille } from "@/lib/api";
 import { useTTS } from "../hooks/useTTS";
@@ -172,8 +172,8 @@ export default function FreeConvert() {
                   <div className="flex flex-wrap justify-center gap-1">
                     {(conversion.bins || []).length > 0 ? (
                       // 서버 응답 { bins: number[] } 사용 권장 (없으면 클라 계산)
-                      conversion.bins.map((mask, idx) => {
-                        const grid = maskToGrid6(mask);
+                      conversion.bins?.map((mask: any, idx: number) => {
+                        const grid = maskToGrid6(mask as any);
                         return (
                           <div className="inline-flex flex-col px-3 py-2 rounded-lg border-2 bg-white shadow-sm hover:shadow-md transition-shadow" key={idx}>
                             {grid.map((row, rowIdx) => (

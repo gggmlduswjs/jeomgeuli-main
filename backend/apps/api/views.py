@@ -181,65 +181,6 @@ def news_cards(request):
         ]
     })
 
-# --- Gemini Chat (simple) ---
-import requests
-
-@csrf_exempt
-def chat_ask(request):
-    """
-    POST {"query":"오늘의 뉴스 5개 요약해줘"}
-    Return:
-    {
-      "mode": "news|weather|qa",
-      "messages": [{"role":"assistant","text":"..."}],
-      "cards": [{"title":"...", "summary":"...", "url":"..."}],
-      "keywords": ["경제","물가"]
-    }
-    """
-    try:
-        body = json.loads(request.body.decode("utf-8"))
-        q = (body.get("query") or "").strip()
-        if not q:
-            return JsonResponse({"messages":[{"role":"assistant","text":"질문을 입력해주세요."}], "keywords":[]})
-
-        # Very light intent detection
-        lower = q.lower()
-        mode = "qa"
-        if "뉴스" in q or "news" in lower:
-            mode = "news"
-        elif "날씨" in q or "weather" in lower:
-            mode = "weather"
-
-        # -- MOCK path if no key --
-        key = os.getenv("GOOGLE_API_KEY", "")
-        if not key:
-            resp = {
-              "mode": mode,
-              "messages":[{"role":"assistant","text": "개발용 목업 응답입니다."}],
-              "cards": [],
-              "keywords": ["뉴스","요약"] if mode=="news" else (["날씨","오늘"] if mode=="weather" else ["질문","답변"])
-            }
-            if mode=="news":
-                # quick RSS top5 (optional): return empty list if blocked
-                try:
-                    import feedparser
-                    feed = feedparser.parse("https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko")
-                    cards=[]
-                    for e in feed.entries[:5]:
-                        cards.append({"title": e.title, "summary": e.get("summary",""), "url": e.link})
-                    resp["cards"]=cards
-                except:
-                    pass
-            return JsonResponse(resp)
-
-        # -- Real Gemini call (text-only minimal prompt) --
-        # You can replace requests with google genai SDK if available.
-        # Here we just echo to keep the scaffold.
-        return JsonResponse({
-            "mode": mode,
-            "messages":[{"role":"assistant","text": f"(Gemini 응답) '{q}' 에 대한 요약/설명입니다."}],
-            "cards": [],
-            "keywords": ["키워드","요약"]
-        })
-    except Exception as e:
-        return JsonResponse({"detail": str(e)}, status=500)
+# --- Gemini Chat moved to apps.chat.views.chat_ask ---
+# The chat_ask function has been moved to apps/chat/views.py
+# to avoid conflicts and use proper Gemini integration

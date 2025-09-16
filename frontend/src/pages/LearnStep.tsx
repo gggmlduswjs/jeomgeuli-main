@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowLeft, SkipForward, RotateCcw } from "lucide-react";
 import { convertBraille, fetchLearn } from '@/lib/api';
-import { api } from '@/api';
-import { asStr, asStrArr } from '@/lib/safe';
+// import { api } from '@/api';
+// import { asStr, asStrArr } from '@/lib/safe';
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Cell as CellTuple } from "@/lib/brailleSafe";
 import { normalizeCells } from "@/lib/brailleSafe";
@@ -128,7 +128,7 @@ export default function LearnStep() {
       try {
         const boolCells = localToBrailleCells(heading);
         const toTuple = (b:boolean[]): CellTuple => [b[0]?1:0,b[1]?1:0,b[2]?1:0,b[3]?1:0,b[4]?1:0,b[5]?1:0];
-        const norm = boolCells.map(toTuple);
+        const norm = boolCells.map((b: any) => toTuple(b));
         if (!cancelled) {
           cacheRef.current[key] = norm;
           setComputed(norm);

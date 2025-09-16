@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, RotateCcw, Play } from 'lucide-react';
 import AppShellMobile from '../components/AppShellMobile';
@@ -7,7 +7,7 @@ import VoiceButton from '../components/VoiceButton';
 import SpeechBar from '../components/SpeechBar';
 import useTTS from '../hooks/useTTS';
 import useSTT from '../hooks/useSTT';
-import { localToBrailleCells } from '@/lib/brailleLocal';
+import { localToBrailleCells } from '@/lib/braille';
 import ToastA11y from '../components/ToastA11y';
 
 interface LearningItem {
@@ -129,7 +129,7 @@ export default function LearnMode() {
   }
 
   // 한글 포함 안전 변환: 첫 번째 셀(문자/단어/문장의 첫 글자 기준)
-  const firstCellPattern: boolean[] =
+  const firstCellPattern: any[] =
     localToBrailleCells(currentItem.char)?.[0] ?? [false, false, false, false, false, false];
 
   const total = learningData.length;

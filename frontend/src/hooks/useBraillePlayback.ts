@@ -1,26 +1,9 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import useBrailleBLE from "./useBrailleBLE";
 import { localToBrailleCells } from "@/lib/braille";
+import type { UseBraillePlaybackOptions, DotArray } from "@/types";
 
-export interface UseBraillePlaybackOptions {
-  ble: {
-    serviceUUID: string;
-    characteristicUUID: string;
-    maxPacketSize?: number;
-  };
-  /** 단어 간 지연(ms) — 데모/실사용 모두 적용 */
-  delayMs?: number;
-  /** 프리뷰 변환 모드: 'local' | 'none' (API 프리뷰가 필요하면 알려줘) */
-  previewMode?: "local" | "none";
-  /** 재생이 끝났을 때 호출 */
-  onEnd?: () => void;
-  /** 각 단어 재생 직전 호출 */
-  onBeforePlay?: (word: string, index: number) => void;
-  /** 각 단어 재생 직후 호출 */
-  onAfterPlay?: (word: string, index: number) => void;
-}
-
-export function useBraillePlayback(opts: UseBraillePlaybackOptions) {
+export function useBraillePlayback(opts: UseBraillePlaybackOptions = {}) {
   const {
     delayMs = 1200,
     previewMode = "local",
@@ -40,7 +23,7 @@ export function useBraillePlayback(opts: UseBraillePlaybackOptions) {
 
   // 프리뷰
   const [currentWord, setCurrentWord] = useState<string>("");
-  const [currentCells, setCurrentCells] = useState<boolean[][]>([]);
+  const [currentCells, setCurrentCells] = useState<DotArray[]>([]);
 
   // 데모 모드: 미연결이면 true
   const demoMode = !isConnected;
@@ -62,7 +45,7 @@ export function useBraillePlayback(opts: UseBraillePlaybackOptions) {
       if (previewMode === "local" && word.trim()) {
         try {
           const cells = localToBrailleCells(word);
-          setCurrentCells(cells);
+          setCurrentCells(cells as unknown as DotArray[]);
         } catch (e) {
           console.warn("[BraillePlayback] preview failed:", e);
           setCurrentCells([]);
@@ -103,7 +86,7 @@ export function useBraillePlayback(opts: UseBraillePlaybackOptions) {
         await new Promise((r) => setTimeout(r, delayMs));
       } else {
         // 실제 BLE 출력
-        await writePattern(word); // 내부에서 API 변환 → BLE 전송
+        await writePattern(word.split('').map(c => c.charCodeAt(0))); // 내부에서 API 변환 → BLE 전송
         if (delayMs > 0) {
           await new Promise((r) => setTimeout(r, delayMs));
         }

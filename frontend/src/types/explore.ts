@@ -18,16 +18,18 @@ export interface Message {
   summaryData?: SummarizeResult;
 }
 
-export interface WeatherData {
+export interface WeatherItem {
   location: string;
   temp: number;
   condition: string;
-  pm25: string;
+  windspeed: number;
+  time: string;
 }
 
 export interface NewsItem {
   title: string;
   desc: string;
+  link: string;
   date: string;
 }
 

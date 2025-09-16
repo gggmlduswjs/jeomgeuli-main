@@ -318,8 +318,8 @@ def ai_assistant_view(request):
             return JsonResponse(response)
         else:
             # Fallback to regular chat processing
-            from .views import chat_ask_view
-            return chat_ask_view(request)
+            from .views import chat_ask
+            return chat_ask(request)
             
     except json.JSONDecodeError:
         return JsonResponse({
