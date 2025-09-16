@@ -66,8 +66,11 @@ export default function FreeConvert() {
 
       // 백엔드 점자 변환 API 사용
       const res = await convertBraille(text);
+      console.log('[FreeConvert] API response:', res);
       const raw = (res as any)?.cells ?? res;
+      console.log('[FreeConvert] Raw cells:', raw);
       const cells = normalizeCells(raw) as unknown as Cell[];
+      console.log('[FreeConvert] Normalized cells:', cells);
       const bins = (res as any)?.bins;
 
       const next: Conversion = {
