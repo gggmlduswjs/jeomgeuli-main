@@ -3,6 +3,7 @@ import AppShellMobile from "../components/AppShellMobile";
 import api from "@/lib/api";
 import { useTTS } from "../hooks/useTTS";
 import { normalizeCells } from "@/lib/brailleSafe";
+import { maskToGrid6 } from "@/lib/brailleGrid";
 import type { Cell } from "@/lib/brailleMap"; // [0|1,0|1,0|1,0|1,0|1,0|1]
 
 function Dot({ on }: { on: boolean }) {
@@ -38,6 +39,7 @@ function CellView({ c }: { c: Cell }) {
 type Conversion = {
   original: string;
   cells: Cell[];
+  bins?: number[]; // 서버가 bins를 주면 이걸로 격자 재계산
   // 서버가 단어/토큰별 세그먼트를 주면 여기에 담아 표시 (옵션)
   segments?: Array<{ original: string; cells: Cell[] }>;
 };
@@ -66,10 +68,12 @@ export default function FreeConvert() {
       const res = await api.convertBraille(text, "word");
       const raw = (res as any)?.cells ?? res;
       const cells = normalizeCells(raw) as unknown as Cell[];
+      const bins = (res as any)?.bins;
 
       const next: Conversion = {
         original: text,
         cells,
+        bins, // 서버가 bins를 주면 이걸로 격자 재계산
         // 서버가 세그먼트를 응답한다면 아래처럼 파싱해서 넣으세요.
         // segments: (res as any)?.segments?.map((s: any) => ({
         //   original: s.original,
@@ -161,11 +165,30 @@ export default function FreeConvert() {
                       .join(" ")}
                   </div>
 
-                  {/* 6점 점자 셀 UI */}
+                  {/* 6점 점자 셀 UI - bins 우선 사용 */}
                   <div className="flex flex-wrap justify-center gap-1">
-                    {conversion.cells.map((cell, idx) => (
-                      <CellView key={idx} c={cell} />
-                    ))}
+                    {(conversion.bins || []).length > 0 ? (
+                      // 서버 응답 { bins: number[] } 사용 권장 (없으면 클라 계산)
+                      conversion.bins.map((mask, idx) => {
+                        const grid = maskToGrid6(mask);
+                        return (
+                          <div className="inline-flex flex-col px-3 py-2 rounded-lg border-2 bg-white shadow-sm hover:shadow-md transition-shadow" key={idx}>
+                            {grid.map((row, rowIdx) => (
+                              <div className="flex" key={rowIdx}>
+                                {row.map((on, colIdx) => (
+                                  <Dot key={colIdx} on={on} />
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // 폴백: 기존 cells 사용
+                      conversion.cells.map((cell, idx) => (
+                        <CellView key={idx} c={cell} />
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import LearnStep from "../pages/LearnStep";
 import FreeConvert from "../pages/FreeConvert";
 import Quiz from "../pages/Quiz";
@@ -200,15 +200,19 @@ export default function App(){
       {import.meta.env.DEV && <DevHealth />}
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/explore" element={<Explore />} />
+
         <Route path="/learn" element={<LearnIndex />} />
         <Route path="/learn/char" element={<LearnStep />} />
         <Route path="/learn/word" element={<LearnStep />} />
         <Route path="/learn/sentence" element={<LearnStep />} />
         <Route path="/learn/free" element={<FreeConvert />} />
-        <Route path="/quiz/:kind" element={<Quiz />} />
+
+        {/* 퀴즈는 두 경로 모두 수용 */}
+        <Route path="/quiz" element={<Quiz />} />
+        <Route path="/learn/quiz" element={<Quiz />} />
+
         <Route path="/review" element={<Review />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/free" element={<Navigate to="/learn/free" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

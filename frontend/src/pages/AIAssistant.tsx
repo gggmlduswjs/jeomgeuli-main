@@ -62,7 +62,7 @@ export default function AIAssistant() {
 
     try {
       // 단순 POST 응답 (SSE를 쓰려면 readSSE로 대체 가능)
-      const res = await api.ask(`[${currentMode}] ${q}`, { signal: ctrl.signal });
+      const res = await api.askAI({ q: `[${currentMode}] ${q}` }, { signal: ctrl.signal });
       setResponse(res);
 
       // 점자 출력: 토글이 켜져 있고 키워드가 있으면 큐 적재 후 재생

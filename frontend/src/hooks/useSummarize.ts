@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { api } from "@/lib/api";
+import api from "@/lib/api";
 import type { SummarizeResult } from "../types/explore";
 
 /** 마크다운에서 불릿 포인트 추출 (•, -, *, 1. / 1)) */
@@ -90,12 +90,12 @@ export function useSummarize() {
       try {
         // 백엔드 요약/응답 API 호출
         // 참고: api.ask는 { chat_markdown, keywords, ... }를 반환한다고 가정
-        const resp = await api.ask(
-          src === "news"
+        const resp = await api.askAI(
+          { q: src === "news"
             ? `다음 주제에 대한 뉴스 요약을 한국어로 간결하게 불릿과 키워드로 제공해줘:\n${clean}`
             : src === "weather"
             ? `다음 지역/질의에 대한 오늘 날씨 요약을 한국어로 제공해줘(불릿과 키워드 포함):\n${clean}`
-            : `다음 질문/주제에 대한 간결한 요약을 한국어로 제공해줘(불릿과 키워드 포함):\n${clean}`
+            : `다음 질문/주제에 대한 간결한 요약을 한국어로 제공해줘(불릿과 키워드 포함):\n${clean}` }
         );
 
         const md = String(resp?.chat_markdown || "");

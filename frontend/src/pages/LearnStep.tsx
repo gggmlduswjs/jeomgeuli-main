@@ -1,12 +1,14 @@
 // src/pages/LearnStep.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowLeft, SkipForward, RotateCcw } from "lucide-react";
-import { get } from "@/lib/http";
-import api from "@/lib/api";
-import { useLocation, useNavigate } from "react-router-dom";
+import { convertBraille, fetchLearn } from '@/lib/api';
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Cell as CellTuple } from "@/lib/brailleSafe";
 import { normalizeCells } from "@/lib/brailleSafe";
 import { localToBrailleCells } from "@/lib/braille";
+import type { LessonItem } from "@/lib/normalize";
+import type { LessonMode } from "@/store/lessonSession";
+import { saveLessonSession } from "@/store/lessonSession";
 
 function Dot({ on }: { on: boolean }) {
   return (
@@ -38,10 +40,7 @@ function CellView({ c }: { c: CellTuple }) {
   );
 }
 
-type Item = {
-  char?: string;
-  word?: string;
-  sentence?: string;
+type Item = LessonItem & {
   name?: string;
   tts?: string | string[];
   decomposeTTS?: string[];
@@ -57,126 +56,87 @@ type Item = {
 };
 
 export default function LearnStep() {
-  const location = useLocation();
+  const [sp] = useSearchParams();
+  const mode = (sp.get('mode') as LessonMode) || 'char';
   const navigate = useNavigate();
-  const mode: "char" | "word" | "sentence" =
-    location.pathname.includes("/word")
-      ? "word"
-      : location.pathname.includes("/sentence")
-      ? "sentence"
-      : "char";
 
+  const [title, setTitle] = useState('');
   const [items, setItems] = useState<Item[]>([]);
-  const [i, setI] = useState(0);
+  const [idx, setIdx] = useState<number>(-1); // -1이면 아직 시작 전
   const [loading, setLoading] = useState(true);
-  const current = items[i];
+  const current = useMemo(() => (idx >= 0 && idx < items.length ? items[idx] : null), [idx, items]);
 
-  const title =
-    mode === "char" ? "자모 학습" : mode === "word" ? "단어 학습" : "문장 학습";
+  // 문항별 캐시 (Map)
+  const cacheRef = useRef<Record<string, CellTuple[]>>({});
 
-  // 학습 아이템 로딩: /learn/:mode → { items: Item[] } 형태 예상
   useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setIdx(-1);
     (async () => {
-      setLoading(true);
       try {
-        // 백엔드가 /learn/:mode를 제공한다고 가정
-        const res = await get<{ items: Item[] }>(`/learn/${mode}`);
-        setItems(Array.isArray(res?.items) ? res.items : []);
-        setI(0);
-      } catch (e) {
-        console.error("[LearnStep] 학습 데이터 로딩 실패:", e);
-        // 최소한의 안전장치(빈 배열)
-        setItems([]);
+        console.log("[LearnStep] API_BASE is", (await import("@/lib/http")).API_BASE);
+        const { title, items } = await fetchLearn(mode);
+        if (!alive) return;
+        
+        console.log("[LearnStep] fetched", { title, items });
+        setTitle(title);
+        setItems(Array.isArray(items) ? items : []);
+        // ✅ 로드되면 바로 0번 아이템부터 시작
+        setIdx(items.length ? 0 : -1);
+        saveLessonSession({ mode, items, createdAt: Date.now() });
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     })();
+    return () => { alive = false; };
   }, [mode]);
 
-  // 점자 데이터가 없으면 서버 변환 → 실패 시 로컬 변환
+  const heading = current?.word || current?.sentence || current?.char || current?.name || '';
+  const key = `${mode}:${heading}`;
+
+  // 비동기 셀 계산 (항목별 캐싱 + 취소)
   const [computed, setComputed] = useState<CellTuple[]>([]);
   useEffect(() => {
-    const run = async () => {
-      const text =
-        current?.word ||
-        current?.sentence ||
-        current?.char ||
-        current?.name ||
-        "";
-      const hasCells =
-        (current?.cells && current.cells.length) ||
-        (current?.brailles && current.brailles.length) ||
-        current?.cell ||
-        current?.braille;
+    if (!heading) { setComputed([]); return; }
 
-      if (!text) {
-        setComputed([]);
-        return;
-      }
-      if (hasCells) {
-        // 원본 데이터 우선
-        setComputed([]);
-        return;
-      }
+    const cached = cacheRef.current[key];
+    if (cached) { setComputed(cached); return; }
 
-      // 1) 서버 변환 시도
+    let cancelled = false;
+    (async () => {
       try {
-        const res = await api.convertBraille(text, "word");
-        const norm = normalizeCells(res?.cells);
-        if (norm.length) {
+        const res = await convertBraille(heading, 'word');
+        const norm = normalizeCells(res.cells);
+        if (!cancelled && norm.length) {
+          cacheRef.current[key] = norm;
           setComputed(norm);
           return;
         }
-      } catch (e) {
-        console.warn("[LearnStep] 서버 점자 변환 실패, 로컬 폴백 시도:", e);
-      }
+      } catch {}
 
-      // 2) 로컬 폴백
       try {
-        const { localToBrailleCells } = await import("@/lib/brailleLocal");
-        const boolCells = localToBrailleCells(text); // boolean[][]
-        const toTuple = (b: boolean[]): CellTuple => [
-          b[0] ? 1 : 0,
-          b[1] ? 1 : 0,
-          b[2] ? 1 : 0,
-          b[3] ? 1 : 0,
-          b[4] ? 1 : 0,
-          b[5] ? 1 : 0,
-        ];
-        setComputed(boolCells.map(toTuple));
-      } catch (e) {
-        console.warn("[LearnStep] 로컬 점자 변환 실패:", e);
-        setComputed([]);
-      }
-    };
+        const boolCells = localToBrailleCells(heading);
+        const toTuple = (b:boolean[]): CellTuple => [b[0]?1:0,b[1]?1:0,b[2]?1:0,b[3]?1:0,b[4]?1:0,b[5]?1:0];
+        const norm = boolCells.map(toTuple);
+        if (!cancelled) {
+          cacheRef.current[key] = norm;
+          setComputed(norm);
+        }
+      } catch { if (!cancelled) setComputed([]); }
+    })();
 
-    run();
-  }, [current]);
+    return () => { cancelled = true; };
+  }, [key]);
 
-  const heading =
-    current?.word || current?.sentence || current?.char || current?.name || "";
-
+  // 최종 cells 선택 (서버 제공 > 캐시/계산)
   const cells: CellTuple[] = useMemo(() => {
     if (!current) return [];
-
-    // 1. 서버가 준 표준 형태 우선
-    if (Array.isArray(current.cells) && current.cells.length)
-      return current.cells;
-    if (Array.isArray(current.brailles) && current.brailles.length)
-      return current.brailles;
+    if (Array.isArray(current.cells) && current.cells.length) return current.cells;
+    if (Array.isArray(current.brailles) && current.brailles.length) return current.brailles;
     if (current.cell) return [current.cell];
-
-    // 2. braille 필드가 뒤죽박죽일 때 정규화
-    if (current.braille) {
-      // string | string[] | CellTuple
-      const norm = normalizeCells(current.braille as any);
-      if (norm.length) return norm;
-      // string[]이 “글자” 배열이라면 서버/로컬 변환으로 이미 computed에 반영됨
-    }
-
-    // 3. 최종 폴백: computed (서버 or 로컬 변환 결과)
-    return computed || [];
-  }, [current, computed]);
+    return cacheRef.current[key] || computed || [];
+  }, [current, computed, key]);
 
   // 간단 TTS
   const say = (t: string) => {
@@ -202,13 +162,18 @@ export default function LearnStep() {
     }
     if (t) say(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [i, heading, current]);
+  }, [idx, heading, current]);
 
-  const next = () => {
-    if (i < items.length - 1) setI(i + 1);
-    else navigate(`/quiz/${mode}?auto=1`); // 학습 끝 → 자동 퀴즈
+  const onNext = () => {
+    if (idx < items.length - 1) {
+      // ✅ 함수형 업데이트로 오프바이원 방지
+      setIdx((i) => i + 1);
+    } else {
+      // 마지막 → 퀴즈 자동 이동
+      navigate(`/quiz?mode=${mode}`, { replace: true });
+    }
   };
-  const prev = () => setI(Math.max(0, i - 1));
+  const prev = () => setIdx(Math.max(0, idx - 1));
   const repeat = () => {
     let t = "";
     if (current?.decomposeTTS && Array.isArray(current.decomposeTTS)) {
@@ -261,7 +226,7 @@ export default function LearnStep() {
             <div className="flex-1 text-center">
               <h1 className="text-lg font-semibold text-fg">{title}</h1>
               <div className="text-xs text-muted mt-1">
-                {i + 1} / {items.length}
+                {idx + 1} / {items.length}
               </div>
             </div>
 
@@ -277,12 +242,12 @@ export default function LearnStep() {
           <div className="bg-white rounded-2xl p-4 shadow-toss">
             <div className="flex justify-between text-sm text-muted mb-2">
               <span>진척도</span>
-              <span>{Math.round(((i + 1) / items.length) * 100)}%</span>
+              <span>{Math.round(((idx + 1) / items.length) * 100)}%</span>
             </div>
             <div className="w-full bg-border rounded-full h-2">
               <div
                 className="bg-primary h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((i + 1) / items.length) * 100}%` }}
+                style={{ width: `${((idx + 1) / items.length) * 100}%` }}
               />
             </div>
           </div>
@@ -331,7 +296,7 @@ export default function LearnStep() {
           <div className="flex items-center justify-between">
             <button
               onClick={prev}
-              disabled={i === 0}
+              disabled={idx === 0}
               className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-card text-fg hover:bg-border disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="이전 항목"
             >
@@ -349,11 +314,11 @@ export default function LearnStep() {
             </button>
 
             <button
-              onClick={next}
+              onClick={onNext}
               className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-primary text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label={i === items.length - 1 ? "테스트 시작" : "다음 항목"}
+              aria-label={idx === items.length - 1 ? "테스트 시작" : "다음 항목"}
             >
-              <span>{i === items.length - 1 ? "테스트" : "다음"}</span>
+              <span>{idx === items.length - 1 ? "테스트" : "다음"}</span>
               <SkipForward className="w-4 h-4" />
             </button>
           </div>
