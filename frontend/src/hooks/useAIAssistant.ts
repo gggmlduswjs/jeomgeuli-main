@@ -91,7 +91,7 @@ export function useAIAssistant(options: UseAIAssistantOptions = {}) {
       setKeywords([]);
 
       try {
-        const resp = await askAI(q); // 백엔드 호출
+        const resp = await askAI({ q }); // 백엔드 호출
         if (controller.signal.aborted) return;
 
         setData(resp);

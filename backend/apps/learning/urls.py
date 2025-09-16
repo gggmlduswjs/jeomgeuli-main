@@ -3,6 +3,7 @@ from . import views_review as views
 
 urlpatterns = [
     path("",         views.review_list,   name="review_list"),   # GET
+    path("list/",    views.review_list,   name="review_list_alt"),   # GET /api/review/list/
     path("save/",    views.review_save,   name="review_save"),   # POST
     path("enqueue/", views.review_enqueue,name="review_enqueue"),# POST
     

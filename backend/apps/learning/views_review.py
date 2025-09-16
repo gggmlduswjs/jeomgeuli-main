@@ -18,7 +18,19 @@ def _load_reviews():
         return []
     try:
         with open(review_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Handle both list format and dict format (legacy)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict):
+                # Convert dict format to list format
+                reviews = []
+                for date, items in data.items():
+                    if isinstance(items, list):
+                        reviews.extend(items)
+                return reviews
+            else:
+                return []
     except:
         return []
 

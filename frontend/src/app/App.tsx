@@ -6,6 +6,8 @@ import Review from "../pages/Review";
 import Explore from "../pages/Explore";
 import NotFound from "../pages/NotFound";
 import DevHealth from "../components/DevHealth";
+import ErrorBoundary from "../components/ErrorBoundary";
+import HealthCheck from "../components/HealthCheck";
 
 function Home(){
   return (
@@ -196,25 +198,29 @@ export default function App(){
   console.log("[APP] mounted", (window as any).__APP_HEALTH__);
 
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      {import.meta.env.DEV && <DevHealth />}
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/explore" element={<Explore />} />
+    <ErrorBoundary>
+      <HealthCheck>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          {import.meta.env.DEV && <DevHealth />}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/explore" element={<Explore />} />
 
-        <Route path="/learn" element={<LearnIndex />} />
-        <Route path="/learn/char" element={<LearnStep />} />
-        <Route path="/learn/word" element={<LearnStep />} />
-        <Route path="/learn/sentence" element={<LearnStep />} />
-        <Route path="/learn/free" element={<FreeConvert />} />
+            <Route path="/learn" element={<LearnIndex />} />
+            <Route path="/learn/char" element={<LearnStep />} />
+            <Route path="/learn/word" element={<LearnStep />} />
+            <Route path="/learn/sentence" element={<LearnStep />} />
+            <Route path="/learn/free" element={<FreeConvert />} />
 
-        {/* 퀴즈는 두 경로 모두 수용 */}
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/learn/quiz" element={<Quiz />} />
+            {/* 퀴즈는 두 경로 모두 수용 */}
+            <Route path="/quiz" element={<Quiz />} />
+            <Route path="/learn/quiz" element={<Quiz />} />
 
-        <Route path="/review" element={<Review />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+            <Route path="/review" element={<Review />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </HealthCheck>
+    </ErrorBoundary>
   );
 }

@@ -87,7 +87,7 @@ export default function FreeConvert() {
       setConversion(next);
       speak(`변환 완료. ${text}의 점자 변환이 완료되었습니다.`);
     } catch (e: any) {
-      console.error("Conversion error:", e);
+      console.error("[FreeConvert] Conversion error:", e);
       setError(e?.message || "점자 변환 중 오류가 발생했습니다.");
       setConversion(null);
     } finally {

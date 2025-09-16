@@ -76,7 +76,7 @@ export default function Explore() {
 
     try {
       setIsLoading(true);
-      const resp = await askAI(`[detail] ${q}`);
+      const resp = await askAI({ q: `[detail] ${q}`, mode: 'explore' });
 
       // 카드 메시지로 추가
       const detailMsg: ChatMessage = {
@@ -147,7 +147,7 @@ export default function Explore() {
 
     try {
       // AI API 호출
-      const response: ChatResponse = await askAI(userText);
+      const response: ChatResponse = await askAI({ q: userText, mode: 'explore' });
 
       // typing indicator 제거
       setMessages(p => p.filter(m => m.id !== typingId));

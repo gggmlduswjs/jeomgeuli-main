@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#3182f6" />
     <meta name="description" content="시각장애인을 위한 정보접근 및 점자학습 PWA" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/svg+xml" sizes="192x192" href="/pwa-192x192.svg" />
     <link rel="icon" href="/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +16,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Clear PWA caches during development
+      if (location.hostname === "localhost" && "serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+        caches?.keys?.().then(keys => keys.forEach(k => caches.delete(k)));
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

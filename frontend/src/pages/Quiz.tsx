@@ -4,7 +4,7 @@ import { ArrowLeft, RotateCcw, Mic, MicOff } from "lucide-react";
 import type { LessonItem } from "@/lib/normalize";
 import type { LessonMode } from "@/store/lessonSession";
 import { loadLessonSession, saveLessonSession } from "@/store/lessonSession";
-import { fetchLearn, saveReview, convertBraille } from "@/lib/api";
+import { convertBraille, fetchLearn, saveReview } from "@/lib/api";
 import { normalizeCells, type Cell } from "@/lib/brailleSafe";
 import { localToBrailleCells } from "@/lib/braille";
 
