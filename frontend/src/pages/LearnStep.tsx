@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { Cell as CellTuple } from "@/lib/brailleSafe";
 import { normalizeCells } from "@/lib/brailleSafe";
+import { localToBrailleCells } from "@/lib/braille";
 
 function Dot({ on }: { on: boolean }) {
   return (

@@ -82,9 +82,8 @@ export default function ExploreStreaming() {
 
       try {
         await readSSE(
-          // sse.ts가 API_BASE를 자동 프리픽스하므로 상대 경로만 넘깁니다
-          "/chat/ask/stream",
-          { prompt: content },
+          `${import.meta.env.VITE_API_BASE_URL}/chat/ask/stream`,
+          { q: content },
           (payload /* , meta */) => handleChunk(botId, payload),
           {
             signal: ctrl.signal,
