@@ -128,6 +128,25 @@ export default function Quiz() {
   const recRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 페이지 진입 시 자동 음성 안내
+  useEffect(() => {
+    const modeNames = {
+      'char': '자모',
+      'word': '단어', 
+      'sentence': '문장'
+    };
+    const modeName = modeNames[mode as keyof typeof modeNames] || mode;
+    const welcomeMessage = `${modeName} 퀴즈 모드입니다. 점자 패턴을 보고 정답을 말해보세요.`;
+    
+    const timer = setTimeout(() => {
+      speak(welcomeMessage);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speak, mode]);
+
   // 데이터 로딩: 세션 → 없으면 재요청
   useEffect(() => {
     let alive = true;

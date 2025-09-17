@@ -20,12 +20,31 @@ interface LearningItem {
 export default function LearnMode() {
   const { mode } = useParams<{ mode: string }>();
   const navigate = useNavigate();
-  const { speak } = useTTS();
+  const { speak, stop: stopTTS } = useTTS();
   const { start: startSTT, stop: stopSTT, isListening, transcript } = useSTT();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // 페이지 진입 시 자동 음성 안내
+  useEffect(() => {
+    const modeNames = {
+      'jamo': '자모',
+      'word': '단어', 
+      'sentence': '문장'
+    };
+    const modeName = modeNames[mode as keyof typeof modeNames] || mode;
+    const welcomeMessage = `${modeName} 학습 모드입니다. 음성 명령으로 다음, 이전, 반복, 테스트를 할 수 있습니다.`;
+    
+    const timer = setTimeout(() => {
+      speak(welcomeMessage);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speak, mode]);
 
   // 학습 데이터 (실제로는 API에서 가져오세요)
   const getLearningData = (): LearningItem[] => {
@@ -74,6 +93,9 @@ export default function LearnMode() {
   }, [transcript]); // 의존성은 transcript만으로 충분
 
   const handleNext = () => {
+    // 기존 TTS 중지
+    stopTTS();
+    
     if (currentIndex < learningData.length - 1) {
       setCurrentIndex((i) => i + 1);
       showToastMessage('다음 항목으로 이동합니다.');
@@ -84,6 +106,9 @@ export default function LearnMode() {
   };
 
   const handlePrevious = () => {
+    // 기존 TTS 중지
+    stopTTS();
+    
     if (currentIndex > 0) {
       setCurrentIndex((i) => i - 1);
       showToastMessage('이전 항목으로 이동합니다.');
@@ -92,6 +117,8 @@ export default function LearnMode() {
 
   const handleRepeat = () => {
     if (!currentItem) return;
+    // 기존 TTS 중지
+    stopTTS();
     const message = `${currentItem.name}. ${currentItem.description}. 점자 패턴을 기억해보세요.`;
     speak(message);
   };
@@ -111,9 +138,11 @@ export default function LearnMode() {
   // 현재 항목 변경 시 음성 안내
   useEffect(() => {
     if (!currentItem) return;
+    // 기존 TTS 중지 후 새 메시지 재생
+    stopTTS();
     const message = `${currentItem.name}. ${currentItem.description}. 점자 패턴을 기억해보세요.`;
     speak(message);
-  }, [currentItem, speak]);
+  }, [currentItem, speak, stopTTS]);
 
   if (!currentItem) {
     return (

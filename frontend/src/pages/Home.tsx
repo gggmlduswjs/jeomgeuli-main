@@ -12,7 +12,7 @@ import ToastA11y from '../components/ToastA11y';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { speak } = useTTS(); // stop은 사용하지 않아서 제거
+  const { speak, stop: stopTTS } = useTTS();
   const { start: startSTT, stop: stopSTT, isListening, transcript } = useSTT();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -46,30 +46,35 @@ export default function Home() {
     
     // 페이지 이동
     learn: () => {
+      stopTTS(); // 기존 TTS 중지
       navigate('/learn');
       showToastMessage('점자 학습 모드로 이동합니다.');
       speak('점자 학습 모드로 이동합니다.');
       stopSTT();
     },
     explore: () => {
+      stopTTS(); // 기존 TTS 중지
       navigate('/explore');
       showToastMessage('정보 탐색 모드로 이동합니다.');
       speak('정보 탐색 모드로 이동합니다.');
       stopSTT();
     },
     review: () => {
+      stopTTS(); // 기존 TTS 중지
       navigate('/review');
       showToastMessage('복습 모드로 이동합니다.');
       speak('복습 모드로 이동합니다.');
       stopSTT();
     },
     freeConvert: () => {
+      stopTTS(); // 기존 TTS 중지
       navigate('/free-convert');
       showToastMessage('자유 변환 모드로 이동합니다.');
       speak('자유 변환 모드로 이동합니다.');
       stopSTT();
     },
     quiz: () => {
+      stopTTS(); // 기존 TTS 중지
       navigate('/quiz');
       showToastMessage('퀴즈 모드로 이동합니다.');
       speak('퀴즈 모드로 이동합니다.');
@@ -78,14 +83,19 @@ export default function Home() {
     
     // 도움말
     help: () => {
+      stopTTS(); // 기존 TTS 중지
       const helpText = '사용 가능한 음성 명령어: 학습, 정보탐색, 복습, 자유변환, 퀴즈, 도움말, 앱소개듣기';
       speak(helpText);
       showToastMessage('도움말을 음성으로 안내합니다.');
     },
     
     // TTS 제어
-    speak: (text: string) => speak(text),
+    speak: (text: string) => {
+      stopTTS(); // 기존 TTS 중지
+      speak(text);
+    },
     mute: () => {
+      stopTTS(); // 기존 TTS 중지
       showToastMessage('음성이 비활성화되었습니다.');
     },
     unmute: () => {

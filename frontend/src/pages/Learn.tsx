@@ -8,7 +8,7 @@ import useSTT from '../hooks/useSTT';
 
 export default function Learn() {
   const navigate = useNavigate();
-  const { speak } = useTTS();
+  const { speak, stop: stopTTS } = useTTS();
   const { start: startSTT, stop: stopSTT, isListening, transcript } = useSTT();
 
   // 페이지 진입 시 안내 (사용자 상호작용 이후 브라우저 정책에 따라 재생 가능)
@@ -25,19 +25,23 @@ export default function Learn() {
     const command = transcript.toLowerCase().trim();
 
     if (command.includes('자모') || command.includes('기본')) {
+      stopTTS(); // 기존 TTS 중지
       navigate('/learn/jamo');
       stopSTT();
     } else if (command.includes('단어')) {
+      stopTTS(); // 기존 TTS 중지
       navigate('/learn/word');
       stopSTT();
     } else if (command.includes('문장')) {
+      stopTTS(); // 기존 TTS 중지
       navigate('/learn/sentence');
       stopSTT();
     } else if (command.includes('자유') || command.includes('변환')) {
+      stopTTS(); // 기존 TTS 중지
       navigate('/learn/free');
       stopSTT();
     }
-  }, [transcript, navigate, stopSTT]);
+  }, [transcript, navigate, stopSTT, stopTTS]);
 
   // 언마운트 시 STT 정리
   useEffect(() => {
@@ -111,6 +115,7 @@ export default function Learn() {
             icon={mode.icon}
             variant="interactive"
             onClick={() => {
+              stopTTS(); // 기존 TTS 중지
               navigate(mode.route);
               speak(`${mode.title} 모드를 시작합니다. ${mode.description}`);
               stopSTT();
@@ -134,6 +139,7 @@ export default function Learn() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  stopTTS(); // 기존 TTS 중지
                   speak(`${mode.title}. ${mode.description}`);
                 }}
                 className="btn btn-ghost text-sm"
