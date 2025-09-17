@@ -47,16 +47,68 @@ export default function Explore() {
     },
   });
 
+  // 페이지 진입 시 자동 음성 안내
+  useEffect(() => {
+    const welcomeMessage = '정보 탐색 모드입니다. 궁금한 것을 물어보세요. 뉴스나 날씨 정보도 확인할 수 있습니다.';
+    
+    const timer = setTimeout(() => {
+      speak(welcomeMessage);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speak]);
+
   // 새 메시지 렌더 시 맨 아래로 스크롤
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages, isLoading]);
 
-  // 점자 출력 핸들러
+  // 점자 출력 핸들러 (점자 출력만)
   const handleBrailleOutput = useCallback((keywords: string[]) => {
     setCurrentBraille(keywords);
     braille.enqueueKeywords(keywords);
   }, [braille]);
+
+  // 학습하기 핸들러 (복습 노트 저장 + 복습 모드로 이동)
+  const handleLearn = useCallback(async (keywords: string[]) => {
+    try {
+      // 키워드를 복습 노트에 저장
+      for (const keyword of keywords) {
+        await fetch('/api/learning/save/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'keyword',
+            payload: {
+              type: 'keyword',
+              content: keyword,
+              correct_answer: keyword,
+              user_answer: '',
+              cells: [],
+              questionCells: [],
+              timestamp: new Date().toISOString(),
+              source: 'explore',
+              query: exploreData?.query || ''
+            }
+          })
+        });
+      }
+      
+      // TTS 안내
+      await speak(`키워드 ${keywords.length}개가 복습 노트에 저장되었습니다. 복습 모드로 이동합니다.`);
+      
+      // 복습 모드로 페이지 이동
+      setTimeout(() => {
+        window.location.href = '/review';
+      }, 2000); // 2초 후 이동
+      
+    } catch (error) {
+      console.error('키워드 학습 저장 실패:', error);
+      await speak('키워드 저장에 실패했습니다.');
+    }
+  }, [speak, exploreData?.query]);
 
   // AI 응답 공통 처리
   const handleAiResponse = useCallback(async (res: ChatResponse) => {
@@ -315,7 +367,18 @@ export default function Explore() {
         <div className="max-w-4xl mx-auto flex flex-wrap items-center gap-3">
           {/* BLE 연결 상태 */}
           <button
-            onClick={isConnected ? disconnect : connect}
+            onClick={async () => {
+              try {
+                if (isConnected) {
+                  disconnect();
+                } else {
+                  await connect();
+                }
+              } catch (error) {
+                console.log("BLE 연결 처리:", error);
+                // 사용자가 취소한 경우는 조용히 처리 (이미 useBrailleBLE에서 처리됨)
+              }
+            }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
               isConnected
                 ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
@@ -466,6 +529,7 @@ export default function Explore() {
                   text={m.text || ''}
                   keywords={m.keywords || []}
                   onBrailleOutput={handleBrailleOutput}
+                  onLearn={handleLearn}
                 />
               );
             })}

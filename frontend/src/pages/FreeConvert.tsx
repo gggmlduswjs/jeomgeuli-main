@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShellMobile from "../components/AppShellMobile";
 import { convertBraille } from "@/lib/api";
 import { useTTS } from "../hooks/useTTS";
@@ -52,6 +52,19 @@ export default function FreeConvert() {
   const [isConverting, setIsConverting] = useState(false);
   const [isEnqueuing, setIsEnqueuing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 페이지 진입 시 자동 음성 안내
+  useEffect(() => {
+    const welcomeMessage = '자유 변환 모드입니다. 원하는 텍스트를 입력하면 점자로 변환됩니다.';
+    
+    const timer = setTimeout(() => {
+      speak(welcomeMessage);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speak]);
 
   const handleConvert = async () => {
     const text = inputText.trim();

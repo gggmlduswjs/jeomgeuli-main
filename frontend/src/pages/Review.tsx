@@ -4,13 +4,17 @@ import { ArrowLeft, RotateCcw, Mic, MicOff, Check, X } from "lucide-react";
 // import { api } from "@/lib/http";
 import { type Cell } from "@/lib/brailleSafe";
 import { API_BASE } from "@/lib/api";
+import useTTS from "../hooks/useTTS";
 
 // 점자 셀 표시 컴포넌트 (퀴즈와 동일)
 function Dot({ on }: { on: boolean }) {
   return <span className={`inline-block w-4 h-4 rounded-full mx-0.5 my-0.5 border-2 ${on ? "bg-primary border-primary shadow-sm" : "bg-card border-border"}`} />;
 }
 function CellView({ c }: { c: Cell }) {
-  const [a,b,c2,d,e,f] = c || [0,0,0,0,0,0];
+  // 안전한 배열 구조분해할당
+  const cellArray = Array.isArray(c) && c.length >= 6 ? c : [0,0,0,0,0,0];
+  const [a,b,c2,d,e,f] = cellArray;
+  
   return (
     <div className="inline-flex flex-col px-3 py-2 rounded-xl border border-border bg-white shadow-toss">
       <div className="flex"><Dot on={!!a}/><Dot on={!!d}/></div>
@@ -51,6 +55,7 @@ function isAnswerMatch(userInput: string, correctAnswer: string, item: any): boo
 
 export default function Review() {
   const navigate = useNavigate();
+  const { speak } = useTTS();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -65,12 +70,25 @@ export default function Review() {
   const recRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 페이지 진입 시 자동 음성 안내
+  useEffect(() => {
+    const welcomeMessage = '복습 모드입니다. 이전에 틀린 문제들을 다시 복습해보세요.';
+    
+    const timer = setTimeout(() => {
+      speak(welcomeMessage);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speak]);
+
   // 데이터 로딩
   useEffect(() => {
     (async () => {
       // 1) 서버 목록 시도
       try {
-        const j = await fetch(`${API_BASE}/review/list`).then(r => r.json());
+        const j = await fetch(`${API_BASE}/learning/list/`).then(r => r.json());
         if (Array.isArray(j?.items) && j.items.length) {
           setItems(j.items); setLoading(false); return;
         }
@@ -105,7 +123,17 @@ export default function Review() {
   }, []);
 
   const currentItem = items[currentIdx];
-  const cells: Cell[] = currentItem?.payload?.questionCells || [];
+  const rawCells = currentItem?.payload?.cells || currentItem?.payload?.questionCells || [];
+  
+  // 점자 데이터 정규화: 안전한 배열 처리
+  const cells: Cell[] = Array.isArray(rawCells) 
+    ? rawCells.filter(cell => Array.isArray(cell) && cell.length === 6)  // 유효한 셀만 필터링
+    : [];
+  
+  // 디버깅: 점자 데이터 확인
+  console.log('[Review] Current item:', currentItem);
+  console.log('[Review] Raw cells:', rawCells);
+  console.log('[Review] Normalized cells:', cells);
 
   const startSTT = () => { 
     try { 
@@ -124,14 +152,7 @@ export default function Review() {
     }
   };
 
-  // TTS
-  const speak = (t: string) => {
-    try { 
-      const u = new SpeechSynthesisUtterance(t); 
-      u.lang="ko-KR"; 
-      window.speechSynthesis.speak(u); 
-    } catch {}
-  };
+  // TTS는 useTTS 훅에서 가져옴
 
   const onSubmit = async (val?: string) => {
     if (!currentItem) return;
@@ -241,7 +262,12 @@ export default function Review() {
                   {cells.map((c, idx) => <CellView key={idx} c={c} />)}
                 </div>
               ) : (
-                <div className="text-muted text-sm py-8">점자 데이터 없음</div>
+                <div className="text-muted text-sm py-8">
+                  <div>점자 데이터 없음</div>
+                  <div className="text-xs mt-2">
+                    {currentItem?.payload?.content ? `내용: ${currentItem.payload.content}` : '데이터 없음'}
+                  </div>
+                </div>
               )}
             </div>
 

@@ -35,8 +35,8 @@ def _load_braille_map():
 def text_to_cells(text: str):
     """텍스트를 점자 셀로 변환 (한글 자음+모음 분해 포함)"""
     try:
-        # 유니코드 정규화로 조합형/분해형 통일
-        normalized_text = unicodedata.normalize("NFKC", text or "")
+        # 유니코드 정규화로 조합형/분해형 통일 (NFC로 조합형 유지)
+        normalized_text = unicodedata.normalize("NFC", text or "")
         print(f"[braille] Converting text: '{normalized_text}' (length: {len(normalized_text)})")
         
         braille_map = _load_braille_map()

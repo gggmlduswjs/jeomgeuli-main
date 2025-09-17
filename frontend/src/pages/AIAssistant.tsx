@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { askChat, type ChatResponse, normalizeAnswer } from "@/lib/api";
+import { askChatWithKeywords, type ChatResponse, normalizeAnswer } from "@/lib/api";
 import type { ChatMessage } from "@/types";
 import { useTTS } from "@/hooks/useTTS";
 import { useBraillePlayback } from "@/hooks/useBraillePlayback";
@@ -71,28 +71,25 @@ export default function AIAssistant() {
     setQuery(""); // Clear input
 
     try {
-      // Use new simplified askChat
-      const text = await askChat(q);
-      setResponse({ answer: text, ok: true });
+      // Use askChatWithKeywords to get both answer and keywords
+      const result = await askChatWithKeywords(q);
+      setResponse({ answer: result.answer, keywords: result.keywords, ok: true });
 
       // Add assistant response to history
       const assistantMessage: ChatMessage = { 
-        id: Date.now().toString(),
+        id: Date.now().toString(), 
         role: "assistant", 
-        type: "text",
-        text: text,
-        createdAt: Date.now()
+        type: "text", 
+        text: result.answer,
+        keywords: result.keywords,
+        createdAt: Date.now() 
       };
       setMessages([...newMessages, assistantMessage]);
 
-      // 점자 출력: 토글이 켜져 있고 키워드가 있으면 큐 적재 후 재생
-      if (brailleOn && response?.keywords?.length) {
-        braille.enqueueKeywords(response.keywords);
-        braille.start();
-      }
+      // 점자 출력은 사용자가 직접 버튼을 눌렀을 때만 실행
 
       // 간단 음성 안내
-      const speakText = buildSpeakText(response);
+      const speakText = buildSpeakText({ answer: result.answer, keywords: result.keywords });
       if (speakText) speak(speakText);
     } catch (err: any) {
       if (err?.name === "AbortError") return; // 사용자가 새로 요청
@@ -130,14 +127,54 @@ export default function AIAssistant() {
     }
   }, [response, speak, stop, buildSpeakText]);
 
-  // 학습(키워드 점자 출력 큐 적재)
-  const learn = useCallback(() => {
+  // 학습(키워드 점자 출력 큐 적재 + 복습 노트 저장 + 복습 모드로 이동)
+  const learn = useCallback(async () => {
     const kws = response?.keywords || [];
     if (!kws.length) return;
-    braille.enqueueKeywords(kws);
-    if (brailleOn) braille.start();
-    // UX 안내는 토스트/알림으로 처리 가능
-  }, [response?.keywords, braille, brailleOn]);
+    
+    try {
+      // 1. 키워드를 복습 노트에 저장
+      for (const keyword of kws) {
+        await fetch('/api/learning/save/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'keyword',
+            payload: {
+              type: 'keyword',
+              content: keyword,
+              correct_answer: keyword,
+              user_answer: '',
+              cells: [], // 키워드 점자 변환은 나중에
+              questionCells: [],
+              timestamp: new Date().toISOString(),
+              source: 'ai_assistant',
+              query: query || ''
+            }
+          })
+        });
+      }
+      
+      // 2. 점자 출력 큐에 적재
+      braille.enqueueKeywords(kws);
+      if (brailleOn) braille.start();
+      
+      // 3. 복습 모드로 이동
+      speak(`키워드 ${kws.length}개가 복습 노트에 저장되었습니다. 복습 모드로 이동합니다.`);
+      
+      // 4. 복습 모드로 페이지 이동
+      setTimeout(() => {
+        window.location.href = '/review';
+      }, 2000); // 2초 후 이동
+      
+    } catch (error) {
+      console.error('키워드 학습 저장 실패:', error);
+      // 점자 출력은 그대로 진행
+      braille.enqueueKeywords(kws);
+      if (brailleOn) braille.start();
+      speak('키워드 저장에 실패했습니다. 점자 출력만 진행합니다.');
+    }
+  }, [response?.keywords, braille, brailleOn, speak, query]);
 
   // Enter 전송
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -325,7 +362,7 @@ export default function AIAssistant() {
           )}
 
           {/* 액션 버튼 */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={repeat}
               disabled={!response}
@@ -333,6 +370,21 @@ export default function AIAssistant() {
               aria-disabled={!response}
             >
               {isSpeaking ? "⏸️ 다시 읽는 중..." : "🔊 다시 읽기"}
+            </button>
+
+            <button
+              onClick={() => {
+                const kws = response?.keywords || [];
+                if (kws.length) {
+                  braille.enqueueKeywords(kws);
+                  if (brailleOn) braille.start();
+                }
+              }}
+              disabled={!response?.keywords?.length}
+              className="btn-secondary py-3"
+              aria-disabled={!response?.keywords?.length}
+            >
+              ⠠⠃ 점자 출력
             </button>
 
             <button

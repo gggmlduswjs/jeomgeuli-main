@@ -112,4 +112,4 @@ export interface BrailleConvertResult {
 }
 
 // 학습 모드 타입
-export type LearnMode = "char" | "word" | "sentence";
+export type LearnMode = "char" | "word" | "sentence" | "keyword";

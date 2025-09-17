@@ -4,6 +4,7 @@ interface AnswerCardProps {
   text: string;
   keywords: string[];
   onBrailleOutput: (keywords: string[]) => void;
+  onLearn?: (keywords: string[]) => void;
   className?: string;
 }
 
@@ -11,6 +12,7 @@ export function AnswerCard({
   text, 
   keywords, 
   onBrailleOutput, 
+  onLearn,
   className = "" 
 }: AnswerCardProps) {
   const hasKeywords = keywords && keywords.length > 0;
@@ -56,8 +58,9 @@ export function AnswerCard({
         </div>
       )}
 
-      {/* 점자 출력 버튼 */}
-      <div className="flex items-center justify-between">
+      {/* 액션 버튼들 */}
+      <div className="flex items-center gap-3">
+        {/* 점자 출력 버튼 */}
         <button
           onClick={() => onBrailleOutput(keywords)}
           disabled={!hasKeywords}
@@ -78,14 +81,37 @@ export function AnswerCard({
           )}
         </button>
 
-        {/* 상태 표시 */}
-        {hasKeywords && (
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span>출력 준비됨</span>
-          </div>
+        {/* 학습하기 버튼 */}
+        {onLearn && (
+          <button
+            onClick={() => onLearn(keywords)}
+            disabled={!hasKeywords}
+            className={clsx(
+              "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200",
+              hasKeywords
+                ? "bg-green-600 text-white hover:bg-green-700 hover:shadow-md active:scale-95"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            )}
+            aria-label={`${keywords.join(", ")} 키워드 학습하기`}
+          >
+            <span className="text-sm">📚</span>
+            <span>학습하기</span>
+            {hasKeywords && (
+              <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                {keywords.length}
+              </span>
+            )}
+          </button>
         )}
       </div>
+
+      {/* 상태 표시 */}
+      {hasKeywords && (
+        <div className="mt-3 text-xs text-gray-500 flex items-center gap-1">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span>출력 준비됨</span>
+        </div>
+      )}
     </div>
   );
 }

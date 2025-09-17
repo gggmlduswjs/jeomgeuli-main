@@ -11,6 +11,7 @@ import { localToBrailleCells } from "@/lib/braille";
 import type { LessonItem } from "@/lib/normalize";
 import type { LessonMode } from "@/store/lessonSession";
 import { saveLessonSession } from "@/store/lessonSession";
+import useTTS from '../hooks/useTTS';
 
 function Dot({ on }: { on: boolean }) {
   return (
@@ -61,6 +62,7 @@ export default function LearnStep() {
   const [sp] = useSearchParams();
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { speak, stop } = useTTS();
 
   // 경로(/learn/char|word|sentence) 우선, 없으면 ?mode=, 그래도 없으면 'char'
   const pathTail = pathname.split('/').pop() || '';
@@ -101,6 +103,24 @@ export default function LearnStep() {
     })();
     return () => { alive = false; };
   }, [mode]);
+
+  // 문제가 변경될 때마다 음성 재생
+  useEffect(() => {
+    if (current && idx >= 0) {
+      // 이전 음성 중지
+      stop();
+      
+      // 새 문제 음성 재생
+      const ttsText = current.tts || current.name || current.char || current.word || current.sentence || '';
+      if (ttsText) {
+        const timer = setTimeout(() => {
+          speak(ttsText);
+        }, 300); // 0.3초 후 재생 (음성 중지 후)
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [current, idx, speak, stop]);
 
   const heading = current?.word || current?.sentence || current?.char || current?.name || '';
   const key = `${mode}:${heading}`;

@@ -215,6 +215,28 @@ function useTTS(): TTSHookReturn {
     } catch {/* noop */}
   }, [isSupported, isSpeaking, isPaused]);
 
+  // 페이지 전환 감지 및 음성 중지
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      hardReset();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hardReset();
+      }
+    };
+
+    // 페이지 전환 시 음성 중지
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hardReset]);
+
   // 언마운트 시 정리
   useEffect(() => {
     unmountedRef.current = false;

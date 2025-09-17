@@ -44,6 +44,14 @@ export function useBrailleBLE() {
 
     } catch (error) {
       console.error("BLE 연결 실패:", error);
+      
+      // 사용자가 취소한 경우는 오류로 처리하지 않음
+      if (error instanceof Error && error.name === 'NotFoundError') {
+        console.log("사용자가 BLE 디바이스 선택을 취소했습니다.");
+        return; // 오류를 던지지 않고 조용히 종료
+      }
+      
+      // 다른 오류는 그대로 던짐
       throw error;
     }
   }, []);

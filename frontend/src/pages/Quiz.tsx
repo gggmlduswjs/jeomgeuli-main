@@ -7,6 +7,7 @@ import { loadLessonSession, saveLessonSession } from "@/store/lessonSession";
 import { convertBraille, fetchLearn, saveReview } from "@/lib/api";
 import { normalizeCells, type Cell } from "@/lib/brailleSafe";
 import { localToBrailleCells } from "@/lib/braille";
+import useTTS from '../hooks/useTTS';
 
 // 🧩 유틸: 어떤 형태로 와도 6튜플로 변환
 function toTuple(x: any): Cell {
@@ -105,6 +106,7 @@ export default function Quiz() {
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const { pathname } = useLocation();
+  const { speak, stop } = useTTS();
   
   // 경로에서 mode 추출 (직접 진입 대비)
   const pathTail = pathname.split('/').pop() || '';
@@ -149,6 +151,24 @@ export default function Quiz() {
   }, [mode]);
 
   const cur = useMemo(() => (i < pool.length ? pool[i] : null), [i, pool]);
+
+  // 문제가 변경될 때마다 음성 재생
+  useEffect(() => {
+    if (cur && i >= 0) {
+      // 이전 음성 중지
+      stop();
+      
+      // 새 문제 음성 재생
+      const answerText = (cur as any).name || cur.word || cur.sentence || cur.char || '';
+      if (answerText) {
+        const timer = setTimeout(() => {
+          speak(answerText);
+        }, 300); // 0.3초 후 재생 (음성 중지 후)
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [cur, i, speak, stop]);
 
   // ✅ 문제 셀 계산: 아이템 데이터 ➜ (없으면) 변환 API ➜ (없으면) 로컬 폴백
   useEffect(() => {
@@ -233,10 +253,7 @@ export default function Quiz() {
     }
   };
 
-  // TTS(다시 듣기: 문제 안내)
-  const speak = (t: string) => {
-    try { const u = new SpeechSynthesisUtterance(t); u.lang="ko-KR"; window.speechSynthesis.speak(u); } catch {}
-  };
+  // TTS는 useTTS 훅에서 가져옴
   const speakPrompt = () => {
     // "점자 문제입니다. 정답을 말하세요." 정도의 안내
     speak("점자 문제입니다. 정답을 말하거나 입력하세요.");

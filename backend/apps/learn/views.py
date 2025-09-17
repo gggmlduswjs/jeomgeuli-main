@@ -53,6 +53,14 @@ def learn_sentence(request):
         print(f"Error in learn_sentence: {e}")
         return JsonResponse({'error': 'Failed to load sentence data'}, status=500)
 
+def learn_keyword(request):
+    try:
+        data = _load_json("lesson_keywords.json")
+        return JsonResponse({"ok": True, "items": data})
+    except Exception as e:
+        print(f"Error in learn_keyword: {e}")
+        return JsonResponse({'error': 'Failed to load keyword data'}, status=500)
+
 # 필요 시 간단한 헬스체크(프런트 진단용)
 def health(request):
     return JsonResponse({"ok": True})

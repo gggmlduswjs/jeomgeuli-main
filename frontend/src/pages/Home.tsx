@@ -17,23 +17,18 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // 온보딩 음성 안내 (사용자 상호작용 후)
+  // 페이지 진입 시 자동 음성 안내
   useEffect(() => {
     const onboardingMessage =
       '시각장애인 학습 앱, 점글이입니다. 메인화면에 점자학습, 정보탐색, 복습하기, 자유변환 모드가 있습니다. 모드를 선택해주세요.';
 
-    const handleFirstInteraction = () => {
+    // 페이지 진입 시 즉시 안내 음성 재생
+    const timer = setTimeout(() => {
       speak(onboardingMessage);
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
-    };
-
-    document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('keydown', handleFirstInteraction);
+    }, 500); // 0.5초 후 재생 (페이지 로딩 완료 후)
 
     return () => {
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
+      clearTimeout(timer);
     };
   }, [speak]);
 
